@@ -1,5 +1,5 @@
 # ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation
-
+this repo was initiality copied from "ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation"
 ![](imgs/arch_superkali.gif)
 
 This is a pytorch implementation of the paper 
@@ -137,22 +137,8 @@ The structure of the code is based on the structure of the [CycleGAN code](https
 5. util/ - General function that are used in packages such as loss definitions.
 
 
-## Citation
-If you use this code for your research, please cite our paper.
-```bibtex
-@inproceedings{fogel2020scrabblegan,
-    title={ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation},
-    author={Sharon Fogel and Hadar Averbuch-Elor and Sarel Cohen and Shai Mazor and Roee Litman},
-    booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month = {June},
-    year = {2020}
-}
 ```
 
 
 ## License
 ScrabbleGAN is released under the MIT license. See the [LICENSE](LICENSE) and [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) files for more information.
-
-## Contributing
-Your contributions are welcome!  
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for more info.
