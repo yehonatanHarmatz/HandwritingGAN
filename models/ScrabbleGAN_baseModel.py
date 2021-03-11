@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 import torch
+
+from .StyleEncoder_model import StyleEncoder
 from .base_model import BaseModel
 from .BigGAN_networks import *
 from util.util import toggle_grad, loss_hinge_dis, loss_hinge_gen, ortho, default_ortho, toggle_grad, prepare_z_y, \
@@ -46,17 +48,24 @@ class ScrabbleGANBaseModel(BaseModel):
         self.loss_OCR_fake =torch.zeros(1)
         self.loss_grad_fake_OCR =torch.zeros(1)
         self.loss_grad_fake_adv =torch.zeros(1)
+
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks to save and load networks.
         # you can use opt.isTrain to specify different behaviors for training and test. For example, some networks will not be used during test, and you don't need to load them.
+        #TODO- add 'S' to models
         self.model_names = ['G', 'D', 'OCR']
         # define networks; you can use opt.isTrain to specify different behaviors for training and test.
         # Next, build the model
         opt.n_classes = len(opt.alphabet)
+
         self.netG = Generator(**vars(opt))
         self.Gradloss = torch.nn.L1Loss()
 
         self.netconverter = strLabelConverter(opt.alphabet)
         self.netOCR = CRNN(opt).to(self.device)
+
+        #TODO- add S to self
+
+        self.style_encoder = StyleEncoder()
         if len(opt.gpu_ids) > 0:
             assert (torch.cuda.is_available())
             self.netOCR.to(opt.gpu_ids[0])
@@ -139,7 +148,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.epsilon = 1e-7
         self.real_z = None
         self.real_z_mean = None
-
+    #TODO- add S to input G and D
     def visualize_fixed_noise(self):
         if self.opt.single_writer:
             self.fixed_noise = self.z[0].repeat((self.fixed_noise_size, 1))
@@ -148,7 +157,7 @@ class ScrabbleGANBaseModel(BaseModel):
         else:
             images = self.netG(self.fixed_noise, self.fixed_text_encode_fake.to(self.device))
 
-        loss_G = loss_hinge_gen(self.netD(**{'x': images, 'z': self.fixed_noise}), self.fixed_text_len.detach(), self.opt.mask_loss)
+        loss_G = loss_hinge_gen(self.netD(**{'x': images, 'z': self.fixed_noise,'s':self.input_features}), self.fixed_text_len.detach(), self.opt.mask_loss)
         # self.loss_G = loss_hinge_gen(self.netD(self.fake, self.rep_label_fake))
         # OCR loss on real data
         pred_fake_OCR = self.netOCR(images)
@@ -203,8 +212,8 @@ class ScrabbleGANBaseModel(BaseModel):
             self.fake = ones_img
             self.netG.train()
             return super(ScrabbleGANBaseModel, self).get_current_visuals()
-
-    def set_input(self, input):
+    #TODO- calc S in preprocessing
+    def set_input(self, input,style_img=None):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
 
         Parameters:
@@ -213,6 +222,7 @@ class ScrabbleGANBaseModel(BaseModel):
         # if hasattr(self, 'real'): del self.real, self.one_hot_real, self.text_encode, self.len_text
         self.real = input['img'].to(self.device)
         if 'label' in input.keys():
+            # the actual word
             self.label = input['label']
             self.text_encode, self.len_text = self.netconverter.encode(self.label)
             if self.opt.one_hot:
@@ -221,15 +231,16 @@ class ScrabbleGANBaseModel(BaseModel):
             self.len_text = self.len_text.detach()
         self.img_path = input['img_path']  # get image paths
         self.idx_real = input['idx']  # get image paths
-
+        #TODO- added s calced
+        self.input_features=self.style_encoder(style_img)
     def load_networks(self, epoch):
         BaseModel.load_networks(self, epoch)
         if self.opt.single_writer:
             load_filename = '%s_z.pkl' % (epoch)
             load_path = os.path.join(self.save_dir, load_filename)
             self.z = torch.load(load_path)
-
-    def forward(self, words=None, z=None):
+    #TODO- add style encoding in input in forward
+    def forward(self, words=None, z=None,s=None):
         """Run forward pass. This will be called by both functions <optimize_parameters> and <test>."""
         if hasattr(self, 'fake'): del self.fake, self.text_encode_fake, self.len_text_fake, self.one_hot_fake
 
@@ -259,21 +270,21 @@ class ScrabbleGANBaseModel(BaseModel):
         if self.opt.one_hot:
             self.one_hot_fake = make_one_hot(self.text_encode_fake, self.len_text_fake, self.opt.n_classes).to(self.device)
             try:
-                self.fake = self.netG(self.z, self.one_hot_fake)
+                self.fake = self.netG(self.z, self.one_hot_fake,self.input_features)
             except:
                 print(words)
         else:
-            self.fake = self.netG(self.z, self.text_encode_fake)  # generate output image given the input data_A
-
+            self.fake = self.netG(self.z, self.text_encode_fake,self.input_features)  # generate output image given the input data_A
+    #TODO- add S input to D
     def backward_D_OCR(self):
         # Real
         if self.real_z_mean is None:
             pred_real = self.netD(self.real.detach())
         else:
-            pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach()})
+            pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach(),'s':self.input_features})
         # Fake
         try:
-            pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach()})
+            pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach(),'s':self.input_features})
         except:
             print('a')
         # Combined loss
@@ -317,14 +328,14 @@ class ScrabbleGANBaseModel(BaseModel):
              clip_grad_norm_(self.netD.parameters(), self.opt.clip_grad)
         return self.loss_OCR_real
 
-
+    # TODO- add S input to D
     def backward_D(self):
         # Real
         if self.real_z_mean is None:
             pred_real = self.netD(self.real.detach())
         else:
-            pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach()})
-        pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach()})
+            pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach(),'s':self.input_features})
+        pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach(),'s':self.input_features})
         # Combined loss
         self.loss_Dreal, self.loss_Dfake = loss_hinge_dis(pred_fake, pred_real, self.len_text_fake.detach(), self.len_text.detach(), self.opt.mask_loss)
         self.loss_D = self.loss_Dreal + self.loss_Dfake
@@ -335,9 +346,9 @@ class ScrabbleGANBaseModel(BaseModel):
              clip_grad_norm_(self.netD.parameters(), self.opt.clip_grad)
         return self.loss_D
 
-
+    # TODO- add S input to D
     def backward_G(self):
-        self.loss_G = loss_hinge_gen(self.netD(**{'x': self.fake, 'z': self.z}), self.len_text_fake.detach(), self.opt.mask_loss)
+        self.loss_G = loss_hinge_gen(self.netD(**{'x': self.fake, 'z': self.z,'s':self.input_features}), self.len_text_fake.detach(), self.opt.mask_loss)
         # OCR loss on real data
 
         pred_fake_OCR = self.netOCR(self.fake)
@@ -484,7 +495,8 @@ class ScrabbleGANBaseModel(BaseModel):
             D_input = torch.cat([self.fake, x[counter]], 0) if x is not None else self.fake
             D_class = torch.cat([self.label_fake, y[counter]], 0) if y[counter] is not None else y[counter]
             # Get Discriminator output
-            D_out = self.netD(D_input, D_class)
+            #TODO- check these values
+            D_out = self.netD(D_input, D_class,self.input_features)
             if x is not None:
                 pred_fake, pred_real = torch.split(D_out, [self.fake.shape[0], x[counter].shape[0]])  # D_fake, D_real
             else:
@@ -503,7 +515,8 @@ class ScrabbleGANBaseModel(BaseModel):
         # Zero G's gradients by default before training G, for safety
         self.optimizer_G.zero_grad()
         self.forward()
-        self.loss_G = loss_hinge_gen(self.netD(self.fake, self.label_fake), self.len_text_fake.detach(), self.opt.mask_loss)
+        #TODO- check val in D
+        self.loss_G = loss_hinge_gen(self.netD(self.fake, self.label_fake,self.input_features), self.len_text_fake.detach(), self.opt.mask_loss)
         self.loss_G.backward()
         self.optimizer_G.step()
 
