@@ -128,6 +128,7 @@ def G_arch(ch=64, attention='64', ksize='333333', dilation='111111'):
 
 
 class Generator(nn.Module):
+    #TODO-
     def __init__(self, G_ch=64, dim_z=128, bottom_width=4, bottom_height=4,resolution=128,
                  G_kernel_size=3, G_attn='64', n_classes=1000,
                  num_G_SVs=1, num_G_SV_itrs=1,
@@ -337,7 +338,11 @@ class Generator(nn.Module):
     # already been passed through G.shared to enable easy class-wise
     # interpolation later. If we passed in the one-hot and then ran it through
     # G.shared in this forward function, it would be harder to handle.
-    def forward(self, z, y):
+
+    # ???y is the word encoding while z is latent noise
+    #TODO- add another parameter
+    #TODO- need to change heavily
+    def forward(self, z, y,s):
         # If hierarchical, concatenate zs and ys
         if self.hier:
             zs = torch.split(z, self.z_chunk_size, 1)
@@ -557,8 +562,8 @@ class Discriminator(nn.Module):
         # Initialize weights
         if not skip_init:
             self = init_weights(self, D_init)
-
-    def forward(self, x, y=None, **kwargs):
+    #TODO add style input
+    def forward(self, x, y=None,s=None, **kwargs):
         # Stick x into h for cleaner for loops without flow control
         h = x
         # Loop over blocks
