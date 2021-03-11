@@ -1,6 +1,7 @@
 import os
 import random
 from collections import defaultdict
+import torch.nn.functional as F
 
 import numpy as np
 import pandas as pd
@@ -64,7 +65,7 @@ class StyleDataset(Dataset):
             idx = idx.tolist()
         img_names = [os.path.join(self.root_dir,
                                   self.style_df.iloc[idx, i]) for i in range(self.k)]
-        images = [io.imread(img_names[i]) for i in range(self.k)]
+        images = [torch.tensor(io.imread(img_names[i])) for i in range(self.k)]
         writer = self.style_df.iloc[idx, self.k]
         sample = {'images': images, 'writer': writer}
 
@@ -72,6 +73,24 @@ class StyleDataset(Dataset):
             sample = self.transform(sample)
         return sample
 
+def concat_images(tf_arr):
+    max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
+    max_y = max(tf_arr[i].shape[1] for i in range(len(tf_arr)))
+    # max_x = max_x + (max_x % 2)
+    # max_y = max_y + (max_y % 2)
+    pad_tf = [F.pad(input=tf,
+                    pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
+                    mode='constant', value=0) for tf in tf_arr]
+    for i in range(len(pad_tf)):
+        print(pad_tf[i].shape)
+    tf = torch.cat(pad_tf, 0)
+    return tf
 if __name__ == '__main__':
     s = StyleDataset('C:\\Users\\User\\Documents\\Handwiting GAN project\\IAM\\words', 'C:\\Users\\User\\Documents\\Handwiting GAN project\\IAM\\xml')
-    print(s[0])
+    a = s[0]['images']
+    print(a)
+    for i in range(len(a)):
+        print(a[i].shape)
+    b = concat_images(a)
+    print(b)
+    print(b.shape)
