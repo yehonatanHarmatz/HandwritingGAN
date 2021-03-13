@@ -34,12 +34,17 @@ def G_arch(ch=64, attention='64', ksize='333333', dilation='111111'):
                  'resolution': [8, 16, 32, 64, 128, 256],
                  'attention': {2 ** i: (2 ** i in [int(item) for item in attention.split('_')])
                                for i in range(3, 9)}}
+
+
     arch[128] = {'in_channels': [ch * item for item in [16, 16, 8, 4, 2]],
                  'out_channels': [ch * item for item in [16, 8, 4, 2, 1]],
                  'upsample': [(2, 2), (2, 2), (2, 2), (2, 2), (2, 2)],
                  'resolution': [8, 16, 32, 64, 128],
                  'attention': {2 ** i: (2 ** i in [int(item) for item in attention.split('_')])
                                for i in range(3, 8)}}
+
+
+
     arch[64] = {'in_channels': [ch * item for item in [16, 16, 8, 4]],
                 'out_channels': [ch * item for item in [16, 8, 4, 2]],
                 'upsample': [(2, 2), (2, 2), (2, 2), (2, 2)],
@@ -143,6 +148,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.name = 'G'
         # Use class only in first layer
+        #default false
         self.first_layer = first_layer
         # gpu-ids
         self.gpu_ids = gpu_ids
@@ -191,13 +197,16 @@ class Generator(nn.Module):
         # fp16?
         self.fp16 = G_fp16
         # Architecture dict
+        # default-128
         self.arch = G_arch(self.ch, self.attention)[resolution]
         self.bn_linear = bn_linear
 
         # If using hierarchical latents, adjust z
+        #default- true
         if self.hier:
             # Number of places z slots into
             self.num_slots = len(self.arch['in_channels']) + 1
+            #default dim=128
             self.z_chunk_size = (self.dim_z // self.num_slots)
             # Recalculate latent dimensionality for even splitting into chunks
             self.dim_z = self.z_chunk_size * self.num_slots
@@ -284,6 +293,7 @@ class Generator(nn.Module):
         # while the inner loop is over a given block
         self.blocks = []
         for index in range(len(self.arch['out_channels'])):
+            #default- no kernel1!
             if 'kernel1' in self.arch.keys():
                 padd1 = 1 if self.arch['kernel1'][index]>1 else 0
                 padd2 = 1 if self.arch['kernel2'][index]>1 else 0
@@ -344,7 +354,9 @@ class Generator(nn.Module):
     #TODO- need to change heavily
     def forward(self, z, y,s):
         # If hierarchical, concatenate zs and ys
+        #DEFAULT-  true
         if self.hier:
+            # split to equal chunks, in dim=1
             zs = torch.split(z, self.z_chunk_size, 1)
             z = zs[0]
             if len(y.shape)<2:
@@ -354,11 +366,13 @@ class Generator(nn.Module):
             else:
                 ys = [torch.cat([y.type(torch.float32), item], 1) for item in zs[1:]]
         else:
+            # TODO-multiply the s vector as well?
             ys = [y] * len(self.blocks)
         # This is the change we made to the Big-GAN generator architecture.
         # The input goes into classes go into the first layer only.
         if self.first_layer:
             # Each characters filter is modulated by the noise vector
+            # default = 1
             if self.one_hot_k==1:
                 z = z.unsqueeze(1).repeat(1, y.shape[1], y.shape[2]) * torch.repeat_interleave(y, z.shape[1], 2)
             # Each character's filter is a one-hot k (for N char alphabet -
@@ -382,7 +396,7 @@ class Generator(nn.Module):
 
         else:
             h = h.view(h.size(0), -1, self.bottom_width, self.bottom_height)
-
+        # ys is y times the block, each time you insert it to the block
         # Loop over blocks
         for index, blocklist in enumerate(self.blocks):
             # Second inner loop in case block has multiple layers

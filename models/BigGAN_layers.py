@@ -378,6 +378,7 @@ class bn(nn.Module):
 # through the which_conv arg. Similar rules apply with which_bn (the input
 # size [which is actually the number of channels of the conditional info] must
 # be preselected)
+#TODO- handle s input as well
 class GBlock(nn.Module):
     def __init__(self, in_channels, out_channels,
                  which_conv1=nn.Conv2d, which_conv2=nn.Conv2d, which_bn=bn, activation=None,
@@ -414,6 +415,7 @@ class GBlock(nn.Module):
         h = self.conv2(h)
         if self.learnable_sc:
             x = self.conv_sc(x)
+        #allows for skip connection
         return h + x
 
 

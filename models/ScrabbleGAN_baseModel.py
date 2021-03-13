@@ -122,6 +122,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.rep_dict = {"'":"", '"':'', ' ':'_', ';':'', '.':''}
         fixed_words_fake = [self.lex[int(i)].encode('utf-8') for i in self.fixed_fake_labels]
         self.fixed_text_encode_fake, self.fixed_text_len = self.netconverter.encode(fixed_words_fake)
+        # default- true (overriden)
         if self.opt.one_hot:
             self.one_hot_fixed = make_one_hot(self.fixed_text_encode_fake, self.fixed_text_len, self.opt.n_classes)
         # Todo change to display names of classes instead of numbers
@@ -225,6 +226,7 @@ class ScrabbleGANBaseModel(BaseModel):
             # the actual word
             self.label = input['label']
             self.text_encode, self.len_text = self.netconverter.encode(self.label)
+            # default true
             if self.opt.one_hot:
                 self.one_hot_real = make_one_hot(self.text_encode, self.len_text, self.opt.n_classes).to(self.device).detach()
             self.text_encode = self.text_encode.to(self.device).detach()
@@ -266,6 +268,7 @@ class ScrabbleGANBaseModel(BaseModel):
                 self.z = z
         self.words = words
         self.text_encode_fake, self.len_text_fake = self.netconverter.encode(self.words)
+        # convert to device
         self.text_encode_fake = self.text_encode_fake.to(self.device)
         if self.opt.one_hot:
             self.one_hot_fake = make_one_hot(self.text_encode_fake, self.len_text_fake, self.opt.n_classes).to(self.device)
