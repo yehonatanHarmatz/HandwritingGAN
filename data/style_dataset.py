@@ -1,96 +1,121 @@
+import io
 import os
-import random
-from collections import defaultdict
-import torch.nn.functional as F
+import six
+import sys
 
+import lmdb
 import numpy as np
-import pandas as pd
 import torch
-from torch.utils.data import Dataset
-from skimage import io
+
+from data import BaseDataset
+from data.base_dataset import get_transform
+from PIL import Image
+
+from util.util import binary_to_dict, concat_images
 
 
-class StyleDataset(Dataset):
-    """Style Handwriting dataset."""
+class StyleDataset(BaseDataset):
+    def modify_commandline_options(parser, is_train):
+        # parser.add_argument('--collate', action='store_false', default=True,
+        #                     help='use regular collate function in data loader')
+        parser.add_argument('--aug_dataroot', type=str, default=None,
+                            help='augmentation images file location, default is None (no augmentation)')
+        parser.add_argument('--aug', action='store_true', default=False,
+                            help='use augmentation (currently relevant for OCR training)')
+        parser.add_argument('--k', type=int, default=15,
+                            help='number of images in the style object')
+        return parser
 
-    def get_writer(self, directory, dr):
-        path = self.xml_dir + "\\" + dr + ".xml"
-        with open(path, 'r') as xml:
-            writer_id = xml.readlines()[4].split('writer-id=\"')[1][:3]
-        return writer_id
+    def __init__(self, opt, target_transform=None):
 
-    def build_style_df(self):
-        category_list = os.listdir(self.root_dir)
-        writer_all_files = defaultdict(list)
-        for directory in category_list:
-            for dr in os.listdir(f'{self.root_dir}\\{directory}'):
-                writer = self.get_writer(directory, dr)
-                for file in os.listdir(f'{self.root_dir}\\{directory}\\{dr}'):
-                    writer_all_files[writer].append((directory, dr, file))
-        columns = [*[f"img{i}" for i in range(self.k)], "writer"]
-        for writer in writer_all_files:
-            l = writer_all_files[writer]
-            random.shuffle(l)
-            chunks = [l[x:x + self.k] for x in range(0, len(l), self.k)]
-            if len(chunks[-1]) != self.k:
-                chunks = chunks[:-1]
-            for chunk in chunks:
-                chunk = ['\\'.join(x[0:3]) for x in chunk]
-                # print(chunk, len(chunk))
-                # print([*chunk, writer])
-                a = pd.DataFrame([[*chunk, writer]], columns=columns)
-                # print(a)
-                self.style_df = self.style_df.append(a, ignore_index=True)
+        BaseDataset.__init__(self, opt)
 
-    def __init__(self, root_dir, xml_path, transform=None, k=15):
-        """
-        Args:
-            root_dir (string): Directory with all the images.
-            xml_path (string): Directory with all the xmls.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
-        self.root_dir = root_dir
-        self.xml_dir = xml_path
-        self.transform = transform
-        self.k = k
-        self.style_df = pd.DataFrame(columns=[*[f"img{i}" for i in range(self.k)], "writer"])
-        self.build_style_df()
+        self.k = opt.k
+
+        self.env = lmdb.open(
+            os.path.abspath(opt.dataroot),
+            max_readers=1,
+            readonly=True,
+            lock=False,
+            readahead=False,
+            meminit=False)
+
+        if not self.env:
+            print('cannot creat lmdb from %s' % (opt.dataroot))
+            sys.exit(0)
+
+        with self.env.begin(write=False) as txn:
+            nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
+            self.nSamples = nSamples
+
+        if opt.aug and opt.aug_dataroot is not None:
+            self.env_aug = lmdb.open(
+                os.path.abspath(opt.aug_dataroot),
+                max_readers=1,
+                readonly=True,
+                lock=False,
+                readahead=False,
+                meminit=False)
+
+            with self.env_aug.begin(write=False) as txn:
+                nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
+                self.nSamples = self.nSamples + nSamples
+                self.nAugSamples = nSamples
+
+        self.transform = get_transform(opt, grayscale=(opt.input_nc == 1))
+        self.target_transform = target_transform
+        # if opt.collate:
+        #     self.collate_fn = TextCollator(opt)
+        # else:
+        #     self.collate_fn = RegularCollator(opt)
+
+        self.labeled = opt.labeled
 
     def __len__(self):
-        return len(self.style_df)
+        return self.nSamples
 
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        img_names = [os.path.join(self.root_dir,
-                                  self.style_df.iloc[idx, i]) for i in range(self.k)]
-        images = [torch.tensor(io.imread(img_names[i])) for i in range(self.k)]
-        writer = self.style_df.iloc[idx, self.k]
-        sample = {'images': images, 'writer': writer}
+    def __getitem__(self, index):
+        assert index <= len(self), 'index range error'
+        envAug = False
+        if hasattr(self, 'env_aug'):
+            if index>=self.nAugSamples:
+                index = index-self.nAugSamples
+            else:
+                envAug = True
+        index += 1
+        with eval('self.env'+'_aug'*envAug+'.begin(write=False)') as txn:
+            style_key = 'style-%09d' % index
+            a = txn.get(style_key.encode('utf-8'))
+            style = np.load(io.BytesIO(a))
+            imgs = []
+            for imgbuf in style:
+                buf = six.BytesIO()
+                buf.write(imgbuf)
+                buf.seek(0)
+                try:
+                    img = Image.open(buf).convert('L')
+                except IOError:
+                    print('Corrupted image for %d' % index)
+                    return self[index + 1]
+                if self.transform is not None:
+                    img = self.transform(img)
+                imgs.append(img)
+            # print([torch.tensor(image).shape for image in imgs])
+            # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
+            imgs_tensor = concat_images([torch.flatten(torch.tensor(image), 0, 1) for image in imgs])
+            item = {'imgs': imgs_tensor, 'imgs_path': style_key, 'idx':index}
 
-        if self.transform:
-            sample = self.transform(sample)
-        return sample
+            if self.labeled:
+                label_key = 'label-%09d' % index
+                label = txn.get(label_key.encode('utf-8'))
+                # label = int(style['label'])
+                if self.target_transform is not None:
+                    label = self.target_transform(label)
+                item['label'] = label
 
-def concat_images(tf_arr):
-    max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
-    max_y = max(tf_arr[i].shape[1] for i in range(len(tf_arr)))
-    # max_x = max_x + (max_x % 2)
-    # max_y = max_y + (max_y % 2)
-    pad_tf = [F.pad(input=tf,
-                    pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
-                    mode='constant', value=0) for tf in tf_arr]
-    for i in range(len(pad_tf)):
-        print(pad_tf[i].shape)
-    tf = torch.cat(pad_tf, 0)
-    return tf
-if __name__ == '__main__':
-    s = StyleDataset('C:\\Users\\User\\Documents\\Handwiting GAN project\\IAM\\words', 'C:\\Users\\User\\Documents\\Handwiting GAN project\\IAM\\xml')
-    a = s[0]['images']
-    print(a)
-    for i in range(len(a)):
-        print(a[i].shape)
-    b = concat_images(a)
-    print(b)
-    print(b.shape)
+
+            if hasattr(self,'Z'):
+                z = self.Z[index-1]
+                item['z'] = z
+
+        return item

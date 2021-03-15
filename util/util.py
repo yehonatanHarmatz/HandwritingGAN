@@ -1,5 +1,8 @@
 """This module contains simple helper functions """
 from __future__ import print_function
+
+import json
+
 import torch
 import numpy as np
 from PIL import Image
@@ -33,9 +36,9 @@ def writeCache(env, cache):
     with env.begin(write=True) as txn:
         for k, v in cache.items():
             if type(k) == str:
-                k = k.encode()
+                k = k.encode('utf-8')
             if type(v) == str:
-                v = v.encode()
+                v = v.encode('utf-8')
             txn.put(k, v)
 
 def loadData(v, data):
@@ -309,3 +312,35 @@ def mkdir(path):
     """
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+def dict_to_binary(dict):
+    strd = json.dumps(dict)
+    # binary_dict = ' '.join(format(ord(letter), 'b') for letter in str)
+    binary_dict = strd.encode('utf-8')
+    return binary_dict
+
+
+def binary_to_dict(binary_dict):
+    # jsn = ''.join(chr(int(x, 2)) for x in binary_dict.split())
+    jsn = binary_dict.decode('utf-8')
+    d = json.loads(jsn)
+    return d
+
+def concat_images(tf_arr):
+    # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
+
+    max_y = max(tf_arr[i].shape[1] for i in range(len(tf_arr)))
+    max_y = 256
+    # max_x = max_x + (max_x % 2)
+    # max_y = max_y + (max_y % 2)
+    # pad_tf = [F.pad(input=tf,
+    #                 pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
+    #                 mode='constant', value=0) for tf in tf_arr]
+    pad_tf = [F.pad(input=tf,
+                    pad=[0, (max_y - tf.shape[1])],
+                    mode='constant', value=0) for tf in tf_arr]
+    # for i in range(len(pad_tf)):
+    #     print(pad_tf[i].shape)
+    tf = torch.cat(pad_tf, 0)
+    return tf
