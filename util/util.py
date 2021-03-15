@@ -32,7 +32,7 @@ def load_network(net, save_dir, epoch):
     net.load_state_dict(state_dict)
     return net
 
-def writeCache(env, cache):
+"""def writeCache(env, cache):
     with env.begin(write=True) as txn:
         for k, v in cache.items():
             if type(k) == str:
@@ -40,7 +40,7 @@ def writeCache(env, cache):
             if type(v) == str:
                 v = v.encode('utf-8')
             txn.put(k, v)
-
+"""
 def loadData(v, data):
     with torch.no_grad():
         v.resize_(data.size()).copy_(data)
