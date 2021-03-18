@@ -99,7 +99,7 @@ class StyleDataset(BaseDataset):
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
-                if self.transform is not None and False:
+                if self.transform is not None and False: #TODO
                     img = self.transform(img)
                 imgs.append(img)
             # print([image for image in imgs])
@@ -113,7 +113,7 @@ class StyleDataset(BaseDataset):
             # img.show()
             if self.labeled:
                 label_key = 'label-%09d' % index
-                label = txn.get(label_key.encode('utf-8'))
+                label = int(txn.get(label_key.encode('utf-8')).decode())
                 # label = int(style['label'])
                 if self.target_transform is not None:
                     label = self.target_transform(label)

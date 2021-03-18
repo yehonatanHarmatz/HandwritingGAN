@@ -70,6 +70,6 @@ for epoch in range(opt.epoch_count,
                 torch.save(model.z[0], os.path.join(opt.checkpoints_dir, opt.name, str(epoch) + '_z.pkl'))
                 torch.save(model.z[0], os.path.join(opt.checkpoints_dir, opt.name, 'latest_z.pkl'))
         '''
-        print('End of epoch %d / %d \t Time Taken: %d sec' % (
-            epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
-        model.update_learning_rate()  # update learning rates at the end of every epoch.
+    print('End of epoch %d / %d \t Time Taken: %d sec' % (
+        epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
+        # model.update_learning_rate()  # update learning rates at the end of every epoch.
