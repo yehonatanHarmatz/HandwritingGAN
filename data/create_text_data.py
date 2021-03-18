@@ -253,8 +253,8 @@ def createDataset(image_path_list, label_list, outputPath, mode, author_id, remo
         imgByteArr = io.BytesIO()
         im.save(imgByteArr, format='tiff')
         wordBin = imgByteArr.getvalue()
-        imageKey = 'image-%09d' % cnt
-        labelKey = 'label-%09d' % cnt
+        imageKey = 'text-image-%09d' % cnt
+        labelKey = 'text-label-%09d' % cnt
 
         cache[imageKey] = wordBin
         if labeled:
@@ -266,7 +266,7 @@ def createDataset(image_path_list, label_list, outputPath, mode, author_id, remo
         cnt += 1
 
     nSamples = cnt - 1
-    cache['num-samples'] = str(nSamples)
+    cache['text-num-samples'] = str(nSamples)
     writeCache(env, cache)
     env.close()
     print('Created dataset with %d samples' % nSamples)

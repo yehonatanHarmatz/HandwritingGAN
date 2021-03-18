@@ -19,9 +19,9 @@ class TextDataset(BaseDataset):
     def modify_commandline_options(parser, is_train):
         parser.add_argument('--collate', action='store_false', default=True,
                             help='use regular collate function in data loader')
-        parser.add_argument('--aug_dataroot', type=str, default=None,
+        parser.add_argument('--text_aug_dataroot', type=str, default=None,
                             help='augmentation images file location, default is None (no augmentation)')
-        parser.add_argument('--aug', action='store_true', default=False,
+        parser.add_argument('--text_aug', action='store_true', default=False,
                             help='use augmentation (currently relevant for OCR training)')
         return parser
 
@@ -42,10 +42,10 @@ class TextDataset(BaseDataset):
             sys.exit(0)
 
         with self.env.begin(write=False) as txn:
-            nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
+            nSamples = int(txn.get('text-num-samples'.encode('utf-8')).decode('utf-8'))
             self.nSamples = nSamples
 
-        if opt.aug and opt.aug_dataroot is not None:
+        if opt.text_aug and opt.text_aug_dataroot is not None:
             self.env_aug = lmdb.open(
                 os.path.abspath(opt.aug_dataroot),
                 max_readers=1,
@@ -55,7 +55,7 @@ class TextDataset(BaseDataset):
                 meminit=False)
 
             with self.env_aug.begin(write=False) as txn:
-                nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
+                nSamples = int(txn.get('text-num-samples'.encode('utf-8')).decode('utf-8'))
                 self.nSamples = self.nSamples + nSamples
                 self.nAugSamples = nSamples
 
@@ -81,7 +81,7 @@ class TextDataset(BaseDataset):
                 envAug = True
         index += 1
         with eval('self.env'+'_aug'*envAug+'.begin(write=False)') as txn:
-            img_key = 'image-%09d' % index
+            img_key = 'text-image-%09d' % index
             imgbuf = txn.get(img_key.encode('utf-8'))
 
             buf = six.BytesIO()
@@ -99,7 +99,7 @@ class TextDataset(BaseDataset):
             item = {'img': img, 'img_path': img_key, 'idx':index}
 
             if self.labeled:
-                label_key = 'label-%09d' % index
+                label_key = 'text-label-%09d' % index
                 label = txn.get(label_key.encode('utf-8'))
 
                 if self.target_transform is not None:

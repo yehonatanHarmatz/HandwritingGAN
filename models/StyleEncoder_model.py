@@ -2,8 +2,9 @@ from torch import nn
 import torch
 from torchvision.models import vgg19_bn
 from torchvision.models import vgg16
-import dominate
+# import dominate
 import os
+
 
 class StyleEncoder(nn.Module):
 
@@ -17,28 +18,51 @@ class StyleEncoder(nn.Module):
         model.eval()
         return model
 
-    def __init__(self, already_trained,path=None ,**kwargs):
+    def get_parmas_to_optimize(self):
+        params_to_update = []
+        for name, param in self.vgg.named_parameters():
+            if param.requires_grad == True:
+                params_to_update.append(param)
+        return params_to_update
+
+    def __init__(self, already_trained=False, path=None, **kwargs):
         super(StyleEncoder, self).__init__()
         self.name = 'S'
+
+        self.cur_loss = torch.zeros(1)
+        self.loss = nn.CrossEntropyLoss()
         if already_trained:
-            self.vgg = vgg_extractor(path)
+            self.vgg = prepare_vgg_extractor(path=path)
         else:
-            self.vgg = vgg_extractor()  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
+            self.vgg = prepare_vgg_extractor()  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
         print(self.vgg)
+        self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),
+                                          lr=0.1)
 
     def forward(self, x, *input):
         return self.vgg(x)
 
+    def backward(self, x, *input):
+        loss = self.loss(x, self.data['label'])
+        loss.backward()
 
+    def optimize(self):
+        x = self.forward(self.data['style'])
+        self.backward(x)
 
+    def optimize_step(self):
+        self.optimizer.step()
+        self.optimizer.zero_grad()
 
+    def set_input(self, data):
+        self.data = data
 
-def prepare_vgg_extractor(index_freeze,path=""):
+def prepare_vgg_extractor(index_freeze=40, path=""):
     # option to load our-trained vgg
-    if path=="":
-        vgg19 = vgg19_bn(pretrained=True).to("cuda")#.eval()
-        freeze_network(vgg19,index_freeze)
-        replace_head(vgg19,672)
+    if path == "":
+        vgg19 = vgg19_bn(pretrained=True).to("cpu")  # .eval()
+        freeze_network(vgg19, index_freeze)
+        replace_head(vgg19, 280)
     else:
         vgg19 = torch.load(path)
         freeze_network(vgg19)
@@ -48,46 +72,52 @@ def prepare_vgg_extractor(index_freeze,path=""):
             layer.float()
     """
 
-    #print(dir(vgg19))
+    # print(dir(vgg19))
     print(vgg19.modules)
     # modules=list(resnet152.children())[:-1]
     # resnet152=nn.Sequential(*modules)
     vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
     print(vgg19_fearures.modules)
-    x = torch.zeros([1, 3, 224, 224]).to("cuda")
+    x = torch.zeros([1, 3, 224, 224]).to("cpu")
     # print(vgg19(x))
     print(vgg19_fearures(x).shape)
 
-    print("features,",vgg19.features)
+    print("features,", vgg19.features)
     print("classfifier,", vgg19.classifier)
-    #print("paarmas,", list(vgg19.parameters()))
-    print([(i,1) for i,f in enumerate(vgg19.parameters()) if f.requires_grad])
-    #print(sum([1 for f in vgg19.classifier if f.requires_grad]))
+    # print("paarmas,", list(vgg19.parameters()))
+    print([(i, 1) for i, f in enumerate(vgg19.parameters()) if f.requires_grad])
+    # print(sum([1 for f in vgg19.classifier if f.requires_grad]))
     child_counter = 0
     """for child in vgg19.children():
         print(" child", child_counter, "is:")
         print(child)
         print(f'len is {len(list(child.parameters()))}')
         child_counter += 1"""
-    #see that one reqgrad and the other doesnt
-    #print(list(vgg19.features[37].parameters()))
-    #print("*" * 60)
-    #print(list(vgg19.features[38].parameters()))
-    #print("*"*60)
-    #print(list(vgg19.features[40].parameters()))
+    # see that one reqgrad and the other doesnt
+    # print(list(vgg19.features[37].parameters()))
+    # print("*" * 60)
+    # print(list(vgg19.features[38].parameters()))
+    # print("*"*60)
+    # print(list(vgg19.features[40].parameters()))
     return vgg19
-def freeze_network(net,index=None):
+
+
+def freeze_network(net, index=None):
     if index is None:
         for param in net.parameters():
             param.requires_grad = False
     else:
-        #TODO- unsdertand with there are more params than layers
+        # TODO- unsdertand with there are more params than layers
         for layer in net.features[:index]:
             for param in layer.parameters():
                 param.requires_grad = False
-def replace_head(model,num_writers):
-    #replace the output of 1000 pictures with num_wrtiers layer
+
+
+def replace_head(model, num_writers):
+    # replace the output of 1000 pictures with num_wrtiers layer
     num_ftrs = model.classifier[6].in_features
     model.classifier[6] = nn.Linear(num_ftrs, num_writers)
-    #input_size = 224
+    # input_size = 224
+
+
 prepare_vgg_extractor(40)

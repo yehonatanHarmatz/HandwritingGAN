@@ -32,7 +32,7 @@ def load_network(net, save_dir, epoch):
     net.load_state_dict(state_dict)
     return net
 
-"""def writeCache(env, cache):
+def writeCache(env, cache):
     with env.begin(write=True) as txn:
         for k, v in cache.items():
             if type(k) == str:
@@ -40,7 +40,7 @@ def load_network(net, save_dir, epoch):
             if type(v) == str:
                 v = v.encode('utf-8')
             txn.put(k, v)
-"""
+
 def loadData(v, data):
     with torch.no_grad():
         v.resize_(data.size()).copy_(data)
@@ -331,16 +331,16 @@ def concat_images(tf_arr):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 
     max_y = max(tf_arr[i].shape[1] for i in range(len(tf_arr)))
-    max_y = 256
+    max_y = 224
     # max_x = max_x + (max_x % 2)
     # max_y = max_y + (max_y % 2)
     # pad_tf = [F.pad(input=tf,
     #                 pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
     #                 mode='constant', value=0) for tf in tf_arr]
     pad_tf = [F.pad(input=tf,
-                    pad=[0, (max_y - tf.shape[1])],
-                    mode='constant', value=0) for tf in tf_arr]
+                    pad=[0, (max_y - tf.shape[2])],
+                    mode='constant', value=255) for tf in tf_arr]
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
-    tf = torch.cat(pad_tf, 0)
+    tf = torch.cat(pad_tf, 1)
     return tf

@@ -248,6 +248,7 @@ class ScrabbleGANBaseModel(BaseModel):
 
         self.label_fake.sample_()
         if words is None:
+            # TODO words not from the style given
             words = [self.lex[int(i)] for i in self.label_fake]
             if self.opt.capitalize:
                 for i, word in enumerate(words):

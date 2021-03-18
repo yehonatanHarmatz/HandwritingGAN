@@ -2,16 +2,18 @@ import io
 import os
 import six
 import sys
-
+import ast
 import lmdb
 import numpy as np
 import torch
+import torchvision
+from torchvision.transforms import ToTensor
 
 from data import BaseDataset
 from data.base_dataset import get_transform
 from PIL import Image
 
-from util.util import binary_to_dict, concat_images
+from util.util import binary_to_dict, concat_images, tensor2im
 
 
 class StyleDataset(BaseDataset):
@@ -93,18 +95,22 @@ class StyleDataset(BaseDataset):
                 buf.write(imgbuf)
                 buf.seek(0)
                 try:
-                    img = Image.open(buf).convert('L')
+                    img = ToTensor()(Image.open(buf))
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
-                if self.transform is not None:
+                if self.transform is not None and False:
                     img = self.transform(img)
                 imgs.append(img)
-            # print([torch.tensor(image).shape for image in imgs])
+            # print([image for image in imgs])
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
-            imgs_tensor = concat_images([torch.flatten(torch.tensor(image), 0, 1) for image in imgs])
-            item = {'imgs': imgs_tensor, 'imgs_path': style_key, 'idx':index}
-
+            # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
+            imgs_tensor = concat_images(imgs)
+            item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index}
+            # im = tensor2im(imgs_tensor.unsqueeze(0))
+            # img = Image.fromarray(im, 'RGB')
+            # img.save('my.png')
+            # img.show()
             if self.labeled:
                 label_key = 'label-%09d' % index
                 label = txn.get(label_key.encode('utf-8'))
@@ -112,7 +118,9 @@ class StyleDataset(BaseDataset):
                 if self.target_transform is not None:
                     label = self.target_transform(label)
                 item['label'] = label
-
+                words_key = 'words-%09d' % index
+                words = np.load(io.BytesIO(txn.get(words_key.encode('utf-8'))))
+                item['words'] = str(words)
 
             if hasattr(self,'Z'):
                 z = self.Z[index-1]

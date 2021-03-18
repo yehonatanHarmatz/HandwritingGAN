@@ -146,6 +146,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
     cache = {}
     nSamples = 0
     cnt = 1
+    print('Number of writers in train: ' + str(len(writer_to_images_dict)))
     for writer in tqdm(writer_to_images_dict):
         l = writer_to_images_dict[writer]
         random.shuffle(l)
@@ -155,11 +156,13 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
         # nSamples += len(chunks)
         # for chunk in chunks:
         imgs = []
+        words = []
         for imagePath, label in l:
             img = handle_image(imagePath, cnt, resize, imgH, h_gap, label, charmaxW, charminW, discard_wide, discard_narr,
              init_gap, cache)
             if img:
                 imgs.append(img)
+                words.append(label)
             if len(imgs) == k:
                 style_key = 'style-%09d' % cnt
                 f = io.BytesIO()
@@ -168,6 +171,13 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
                 # b = np.load(io.BytesIO(a))
                 cache[style_key] = a
                 imgs = []
+                if labeled:
+                    words_key = 'words-%09d' % cnt
+                    f = io.BytesIO()
+                    np.save(f, words)
+                    a = f.getvalue()
+                    cache[words_key] = a
+                words = []
                 # outfile = TemporaryFile()
                 # np.save(outfile, imgs)
                 # outfile.seek(0)
