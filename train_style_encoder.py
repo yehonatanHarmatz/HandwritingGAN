@@ -40,7 +40,7 @@ for epoch in range(opt.epoch_count,
             model.optimize()
             counter += 1
         model.optimize_step()
-
+        print(model.cur_loss)
         if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
             save_result = total_iters % opt.update_html_freq == 0
             model.compute_visuals()

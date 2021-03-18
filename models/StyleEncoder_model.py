@@ -44,6 +44,7 @@ class StyleEncoder(nn.Module):
 
     def backward(self, x, *input):
         loss = self.loss(x, self.data['label'])
+        self.cur_loss = loss
         loss.backward()
 
     def optimize(self):
