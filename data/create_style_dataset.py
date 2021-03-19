@@ -37,16 +37,20 @@ def create_writers_dict(top_dir,dataset, mode, words, remove_punc):
         im_dirs = []
         line_ann_dirs = []
         image_path_list, label_list = [], []
+        ann_files_set = set()
+        ann_files_lines = defaultdict(set)
         for mod in mode:
-            part_file = os.path.join(root_dir, 'original_partition', mod + '.lst')
+            part_file = os.path.join(root_dir, 'new_partition', mod + '.lst')
             with open(part_file)as fp:
                 for line in fp:
                     name = line.split('-')
-                    if int(name[-1][:-1]) == 0:
-                        anno_file = os.path.join(labels_dir, '-'.join(name[:2]) + '.xml')
+                    anno_file = os.path.join(labels_dir, '-'.join(name[:2]) + '.xml')
+                    if anno_file not in ann_files_set:
+                        ann_files_set.add(anno_file)
                         full_ann_files.append(anno_file)
                         im_dir = os.path.join(images_dir, name[0], '-'.join(name[:2]))
                         im_dirs.append(im_dir)
+                    ann_files_lines[anno_file].add(name[-1].strip())
 
         # if author_number >= 0:
         #     full_ann_files = [full_ann_files[author_number]]
@@ -64,18 +68,21 @@ def create_writers_dict(top_dir,dataset, mode, words, remove_punc):
                     if words:
                         lines_list = []
                         for j in range(len(lines)):
+                            id = lines[j]['@id']
+                            if id.rsplit('-', 1)[-1] not in ann_files_lines[anno_file]:
+                                continue
                             lines_list.extend(lines[j]['word'])
                         lines = lines_list
                 except:
                     print('line is not decodable')
                 for line in lines:
+                    id = line['@id']
                     try:
                         label = html.unescape(line['@text'])
                     except:
                         continue
                     if remove_punc and label in lables_to_skip:
                         continue
-                    id = line['@id']
                     imagePath = os.path.join(im_dirs[i], id + '.png')
                     # image_path_list.append(imagePath)
                     # label_list.append(label)
@@ -229,6 +236,18 @@ def main():
     discard_narr = True  # Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
+    '''
+    mode = 'te'
+    writers_images_te, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
+    if sorted(list(writers_images_tr.keys())) != sorted(list(writers_images_te.keys())):
+        print('AAAAAA')
+    print(sorted(list(writers_images_tr.keys())))
+    print(sorted(list(writers_images_te.keys())))
+    mode = 'gan_test'
+    writers_images_gan, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
+    print(set(writers_images_tr.keys()).intersection(set(writers_images_gan.keys())))
+    print(sorted(writers_images_gan.keys()))
+    '''
     # in a previous version we also cut the white edges of the image to keep a tight rectangle around the word but it
     # seems in all the datasets we use this is already the case so I removed it. If there are problems maybe we should add this back.
     create_dataset(writers_images, outputPath, mode, k, remove_punc, resize, imgH, init_gap, h_gap,
