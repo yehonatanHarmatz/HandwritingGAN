@@ -234,7 +234,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.img_path = input['img_path']  # get image paths
         self.idx_real = input['idx']  # get image paths
         #TODO- added s calced
-        self.input_features=self.style_encoder(style_img)
+        self.input_features=torch.zeros((4096))#self.style_encoder(style_img)
     def load_networks(self, epoch):
         BaseModel.load_networks(self, epoch)
         if self.opt.single_writer:

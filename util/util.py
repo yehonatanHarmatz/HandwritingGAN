@@ -326,7 +326,7 @@ def binary_to_dict(binary_dict):
     jsn = binary_dict.decode('utf-8')
     d = json.loads(jsn)
     return d
-
+# written by Yehonatan Harmatz
 def concat_images(tf_arr):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 

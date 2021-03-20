@@ -35,7 +35,8 @@ def train_vgg_extractor():
 
             # Runs the forward pass with autocasting.
             with autocast():
-                output = model(input)
+                # size of height 32 * K , width , channel=3
+                output = model(input['image'])
                 loss = loss_fn(output, target)
 
             # Scales loss.  Calls backward() on scaled loss to create scaled gradients.
