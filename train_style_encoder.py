@@ -2,28 +2,35 @@ import os
 import time
 
 import torch
+from tqdm import tqdm
 
-from data import create_dataset
+from data import create_dataset, dataset_catalog
 from options.train_options import TrainOptions
 from util.visualizer import Visualizer
 from util.util import get_curr_data
 from models.StyleEncoder_model import StyleEncoder
 opt = TrainOptions().parse()
 print(opt)
-dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
-dataset_size = len(dataset)
-print(dataset_size)
+tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
+tr_dataset_size = len(tr_dataset)
+print(tr_dataset_size)
+opt.dataname = "style15IAMcharH32rmPunct_te"
+opt.dataroot = dataset_catalog.datasets[opt.dataname]
+te_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
+te_dataset_size = len(te_dataset)
+print(te_dataset_size)
 total_iters = 0  # the total number of training iterations
 opt.iter = 0
 model = StyleEncoder()
-visualizer = Visualizer(opt)
+# visualizer = Visualizer(opt)
 t_data = 0
 for epoch in range(opt.epoch_count,
                    opt.niter + opt.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
+    model.train()
     epoch_start_time = time.time()  # timer for entire epoch
     iter_data_time = time.time()  # timer for data loading per iteration
     epoch_iter = 0  # the number of training iterations in current epoch, reset to 0
-    for i, data in enumerate(dataset):
+    for i, data in tqdm(enumerate(tr_dataset)):
         opt.iter = i
         iter_start_time = time.time()  # timer for computation per iteration
         if total_iters % opt.print_freq == 0:
@@ -72,4 +79,16 @@ for epoch in range(opt.epoch_count,
         '''
     print('End of epoch %d / %d \t Time Taken: %d sec' % (
         epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
+    correct = 0
+    model.eval()
+    for i, data in enumerate(te_dataset):
+        output = model(data['style'])
+        print(torch.max(output.data, 1)[1], data['label'])
+        correct += (torch.max(output.data, 1)[1] == data['label']).sum().item()
+
+    accuracy = 100 * correct / te_dataset_size
+
+    print("Accuracy = {}".format(accuracy))
         # model.update_learning_rate()  # update learning rates at the end of every epoch.
+    print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
+    model.save_network()

@@ -58,12 +58,16 @@ class StyleEncoder(nn.Module):
     def set_input(self, data):
         self.data = data
 
+    def save_network(self):
+        torch.save(self.vgg.cpu().state_dict(), "checkpoints/vgg")
+
+
 def prepare_vgg_extractor(index_freeze=40, path=""):
     # option to load our-trained vgg
     if path == "":
         vgg19 = vgg19_bn(pretrained=True).to("cpu")  # .eval()
         freeze_network(vgg19, index_freeze)
-        replace_head(vgg19, 280)
+        replace_head(vgg19, 396)
     else:
         vgg19 = torch.load(path)
         freeze_network(vgg19)
