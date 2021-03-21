@@ -214,7 +214,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'te'  # tr/te/val/va1/va2/all
+    mode = 'tr'  # tr/te/val/va1/va2/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:
@@ -236,6 +236,7 @@ def main():
     discard_narr = True  # Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
+    print(sorted([(len(writers_images[wr]), wr) for wr in writers_images], reverse=True))
     '''
     mode = 'te'
     writers_images_te, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)

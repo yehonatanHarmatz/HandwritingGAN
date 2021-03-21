@@ -35,7 +35,7 @@ class StyleEncoder(nn.Module):
             self.vgg = prepare_vgg_extractor(path=path,device=device)
         else:
             self.vgg = prepare_vgg_extractor(device=device)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
-        print(self.vgg)
+        # print(self.vgg)
         self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),
                                           lr=0.1)
         self.device=device
@@ -61,8 +61,8 @@ class StyleEncoder(nn.Module):
         self.data['style']=self.data['style'].to(self.device)
         self.data['label'] = self.data['label'].to(self.device)
 
-    def save_network(self):
-        torch.save(self.vgg.state_dict(), "checkpoints/vgg")
+    def save_network(self, epoch):
+        torch.save(self.vgg.state_dict(), f"checkpoints/vgg{epoch}")
 
 
 def prepare_vgg_extractor(index_freeze=40, path="",device="cuda"):
@@ -81,19 +81,19 @@ def prepare_vgg_extractor(index_freeze=40, path="",device="cuda"):
     """
     vgg19.to(device)
     # print(dir(vgg19))
-    print(vgg19.modules)
+    # print(vgg19.modules)
     # modules=list(resnet152.children())[:-1]
     # resnet152=nn.Sequential(*modules)
     vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
-    print(vgg19_fearures.modules)
-    x = torch.zeros([1, 3, 224, 224]).to(device)
+    # print(vgg19_fearures.modules)
+    # x = torch.zeros([1, 3, 224, 224]).to("cpu")
     # print(vgg19(x))
-    print(vgg19_fearures(x).shape)
+    # print(vgg19_fearures(x).shape)
 
-    print("features,", vgg19.features)
-    print("classfifier,", vgg19.classifier)
+    # print("features,", vgg19.features)
+    # print("classfifier,", vgg19.classifier)
     # print("paarmas,", list(vgg19.parameters()))
-    print([(i, 1) for i, f in enumerate(vgg19.parameters()) if f.requires_grad])
+    # print([(i, 1) for i, f in enumerate(vgg19.parameters()) if f.requires_grad])
     # print(sum([1 for f in vgg19.classifier if f.requires_grad]))
     child_counter = 0
     """for child in vgg19.children():
@@ -128,4 +128,4 @@ def replace_head(model, num_writers):
     # input_size = 224
 
 
-prepare_vgg_extractor(40)
+# prepare_vgg_extractor(40)

@@ -9,9 +9,10 @@ from options.train_options import TrainOptions
 from util.visualizer import Visualizer
 from util.util import get_curr_data
 from models.StyleEncoder_model import StyleEncoder
+
 opt = TrainOptions().parse()
 print(opt)
-device="cuda"
+device="cpu"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
@@ -22,7 +23,7 @@ te_dataset_size = len(te_dataset)
 print(te_dataset_size)
 total_iters = 0  # the total number of training iterations
 opt.iter = 0
-model = StyleEncoder()
+model = StyleEncoder(device=device)
 # visualizer = Visualizer(opt)
 t_data = 0
 for epoch in range(opt.epoch_count,
@@ -37,20 +38,19 @@ for epoch in range(opt.epoch_count,
         iter_start_time = time.time()  # timer for computation per iteration
         if total_iters % opt.print_freq == 0:
             t_data = iter_start_time - iter_data_time
-        total_iters += opt.batch_size * opt.num_accumulations
-        epoch_iter += opt.batch_size * opt.num_accumulations
+        total_iters += opt.batch_size
+        epoch_iter += opt.batch_size
         #
         #
         #
-        counter = 0
-        for accumulation_index in range(opt.num_accumulations):
-            curr_data = get_curr_data(data, opt.batch_size, counter)
-            model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
-            model.optimize()
-            counter += 1
+        curr_data = get_curr_data(data, opt.batch_size, 0)
+        model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
+        model.optimize()
         model.optimize_step()
         if total_iters % opt.print_freq == 0:
             print(model.cur_loss)
+        # if total_iters > 80:
+        #     break
         # if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
         #     save_result = total_iters % opt.update_html_freq == 0
             # model.compute_visuals()
@@ -66,11 +66,12 @@ for epoch in range(opt.epoch_count,
             print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
             save_suffix = 'iter_%d' % total_iters if opt.save_by_iter else 'latest'
             model.save_networks(save_suffix)
-
-        for i in opt.gpu_ids:
-            with torch.cuda.device('cuda:%d' % (i)):
-                torch.cuda.empty_cache()
-
+        '''
+        if device == 'cuda':
+            for i in opt.gpu_ids:
+                with torch.cuda.device('cuda:%d' % (i)):
+                    torch.cuda.empty_cache()
+        '''
         iter_data_time = time.time()
         if epoch % opt.save_epoch_freq == 0:  # cache our model every <save_epoch_freq> epochs
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
@@ -83,16 +84,15 @@ for epoch in range(opt.epoch_count,
     print('End of epoch %d / %d \t Time Taken: %d sec' % (
         epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
     correct = 0
-    #with no_grad():
     model.eval()
-    for i, data in enumerate(te_dataset):
-        output = model(data['style'].to(device))
-        #print(torch.max(output.data, 1)[1], data['label'].to(device))
-        correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
-
+    with torch.no_grad():
+        for i, data in enumerate(te_dataset):
+            curr_data = get_curr_data(data, opt.batch_size, 0)
+            output = model(curr_data['style'])
+            print(torch.max(output.data, 1)[1], data['label'])
+            correct += (torch.max(output.data, 1)[1] == data['label']).sum().item()
     accuracy = 100 * correct / te_dataset_size
-
-    print("Accuracy = {}".format(accuracy))
-        # model.update_learning_rate()  # update learning rates at the end of every epoch.
+    print("Test Accuracy = {}".format(accuracy))
+    # model.update_learning_rate()  # update learning rates at the end of every epoch.
     print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
-    model.save_network()
+    # model.save_network(epoch)
