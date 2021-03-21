@@ -100,6 +100,10 @@ if __name__ == '__main__':
                 losses = model.get_current_losses()
                 t_comp = (time.time() - iter_start_time) / (opt.batch_size*opt.num_accumulations)
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
+                allocated = torch.cuda.memory_allocated() / 1024 / 1024 / 1024
+                print("torch.cuda.memory_allocated: %fGB" % allocated)
+                reserved = torch.cuda.memory_reserved() / 1024 / 1024 / 1024
+                print("torch.cuda.memory_reserved: %fGB" % reserved)
                 if opt.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, losses)
 

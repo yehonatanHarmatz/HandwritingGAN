@@ -89,7 +89,7 @@ class CustomDatasetDataLoader():
             batch_size=opt.batch_size * opt.num_accumulations,
             shuffle=not opt.serial_batches,
             num_workers=int(opt.num_threads),
-            pin_memory=True, drop_last=True,
+            pin_memory=False, drop_last=True,
             collate_fn=collate_fn)
 
     def load_data(self):

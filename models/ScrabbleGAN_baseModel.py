@@ -234,7 +234,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.img_path = input['img_path']  # get image paths
         self.idx_real = input['idx']  # get image paths
         #TODO- added s calced
-        self.input_features=torch.zeros((4096))#self.style_encoder(style_img)
+        self.input_features=torch.zeros((4096)).to(self.device)#self.style_encoder(style_img)
     def load_networks(self, epoch):
         BaseModel.load_networks(self, epoch)
         if self.opt.single_writer:
@@ -275,8 +275,9 @@ class ScrabbleGANBaseModel(BaseModel):
             self.one_hot_fake = make_one_hot(self.text_encode_fake, self.len_text_fake, self.opt.n_classes).to(self.device)
             try:
                 self.fake = self.netG(self.z, self.one_hot_fake,self.input_features)
-            except:
+            except Exception as e:
                 print(words)
+                print(e)
         else:
             self.fake = self.netG(self.z, self.text_encode_fake,self.input_features)  # generate output image given the input data_A
     #TODO- add S input to D

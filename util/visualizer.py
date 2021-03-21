@@ -1,15 +1,12 @@
-import PIL
 import numpy as np
 import os
 import sys
 import ntpath
 import time
-
-from PIL import Image
-
-from . import util, html_util
+from . import util, html
 from subprocess import Popen, PIPE
-# from scipy.misc import imresize
+#from scipy.misc import imresize
+import cv2
 
 if sys.version_info[0] == 2:
     VisdomExceptionBase = Exception
@@ -42,15 +39,9 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
         save_path = os.path.join(image_dir, image_name)
         h, w, _ = im.shape
         if aspect_ratio > 1.0:
-            # im = imresize(im, (h, int(w * aspect_ratio)), interp='bicubic')
-            size = (h, int(w * aspect_ratio))
-            im = Image.fromarray(im)
-            im = np.array(im.resize(size, PIL.Image.BICUBIC))
+            im = cv2.resize(src=im, dsize=(h, int(w * aspect_ratio)), interpolation=cv2.INTER_CUBIC)
         if aspect_ratio < 1.0:
-            size = (int(h / aspect_ratio), w)
-            im = Image.fromarray(im)
-            im = np.array(im.resize(size, PIL.Image.BICUBIC))
-            # im = imresize(im, (int(h / aspect_ratio), w), interp='bicubic')
+            im = cv2.resize(src=im, dsize=(int(h / aspect_ratio), w), interpolation=cv2.INTER_CUBIC)
         util.save_image(im, save_path)
 
         ims.append(image_name)
@@ -85,8 +76,11 @@ class Visualizer():
         if self.display_id > 0:  # connect to a visdom server given <display_port> and <display_server>
             import visdom
             self.ncols = opt.display_ncols
-            self.vis = visdom.Visdom(server=opt.display_server, port=opt.display_port, env=opt.display_env)
-            if not self.vis.check_connection():
+            try:
+                self.vis = visdom.Visdom(server=opt.display_server, port=opt.display_port, env=opt.display_env)
+                if not self.vis.check_connection():
+                    self.create_visdom_connections()
+            except:
                 self.create_visdom_connections()
 
         if self.use_html:  # create an HTML object at <checkpoints_dir>/web/; images will be saved under <checkpoints_dir>/web/images/
@@ -106,12 +100,13 @@ class Visualizer():
 
     def create_visdom_connections(self):
         """If the program could not connect to Visdom server, this function will start a new server at port < self.port > """
-        cmd = sys.executable + ' -m visdom.server -p %d &>/dev/null &' % self.port
+        #cmd = sys.executable + ' -m visdom.server -p %d &>/dev/null &' % self.port
+        cmd = sys.executable + ' -m visdom.server -p %d ' % self.port
         print('\n\nCould not connect to Visdom server. \n Trying to start a server....')
         print('Command: %s' % cmd)
         Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 
-    def display_current_results(self, visuals, epoch, save_result):
+    def display_current_results(self, visuals,labels, epoch, save_result):
         """Display current results on visdom; save current results to an HTML file.
 
         Parameters:
@@ -124,6 +119,17 @@ class Visualizer():
             if ncols > 0:        # show all the images in one visdom panel
                 ncols = min(ncols, len(visuals))
                 h, w = next(iter(visuals.values())).shape[:2]
+                #w*=2
+                #ADDED the text of fake labels
+                #self.vis.text("test!")
+                # fake labels
+                s="fakes: "
+                for l in labels[0]:
+                    s+=l.decode("utf-8")+","
+                s+='\ntrue: '
+                for l in labels[1]:
+                    s+=l.decode("utf-8")+","
+                self.vis.text(s,win=self.display_id + 0x666)
                 table_css = """<style>
                         table {border-collapse: separate; border-spacing: 4px; white-space: nowrap; text-align: center}
                         table td {width: % dpx; height: % dpx; padding: 4px; outline: 4px solid black}
@@ -178,7 +184,7 @@ class Visualizer():
                 util.save_image(image_numpy, img_path)
 
             # update website
-            webpage = html_util.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=1)
+            webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=1)
             for n in range(epoch, 0, -1):
                 webpage.add_header('epoch [%d]' % n)
                 ims, txts, links = [], [], []
@@ -235,3 +241,24 @@ class Visualizer():
         print(message)  # print the message
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)  # save the message
+    #TODO- call this with usage gpu
+    def plot_gpu_usage(self, epoch, counter_ratio, losses):
+        """display the current GPU usages on visdom display: dictionary of type labels and values
+
+        """
+        if not hasattr(self, 'plot_gpu'):
+            self.plot_gpu = {'X': [], 'Y': [], 'legend': list(losses.keys())}
+        self.plot_gpu['X'].append(epoch + counter_ratio)
+        self.plot_gpu['Y'].append([losses[k] for k in self.plot_gpu['legend']])
+        try:
+            self.vis.line(
+                X=np.stack([np.array(self.plot_gpu['X'])] * len(self.plot_gpu['legend']), 1),
+                Y=np.array(self.plot_gpu['Y']),
+                opts={
+                    'title': self.name + ' gpu usage over time',
+                    'legend': self.plot_gpu['legend'],
+                    'xlabel': 'epoch',
+                    'ylabel': 'GB Memory'},
+                win=self.display_id+999)
+        except VisdomExceptionBase:
+            self.create_visdom_connections()

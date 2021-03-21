@@ -304,7 +304,7 @@ def printAlphabet(label_list):
 if __name__ == '__main__':
     create_Dict = True # create a dictionary of the generated dataset
     dataset = 'IAM'     #CVL/IAM/RIMES/gw
-    mode = 'tr'        # tr/te/val/va1/va2/all
+    mode = 'all'        # tr/te/val/va1/va2/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:

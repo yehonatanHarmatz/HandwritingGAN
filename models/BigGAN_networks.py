@@ -246,7 +246,7 @@ class Generator(nn.Module):
             if self.first_layer:
                 input_size = self.z_chunk_size
             else:
-                input_size = self.n_classes + self.z_chunk_size
+                input_size = self.n_classes + self.z_chunk_size +4096
             self.which_bn = functools.partial(layers.ccbn,
                                               which_linear=bn_linear,
                                               cross_replica=self.cross_replica,
@@ -361,13 +361,21 @@ class Generator(nn.Module):
             z = zs[0]
             if len(y.shape)<2:
                 y = y.unsqueeze(1)
+            # don't insert y yet?
             if self.first_layer:
                 ys = zs[1:]
+            #concat parts of z with  y together
             else:
                 ys = [torch.cat([y.type(torch.float32), item], 1) for item in zs[1:]]
+            if len(s.shape)<2:
+                s=torch.reshape(s, (4,-1))
+                #s = s.unsqueeze(2)
+            #item is 4,32 ss is 4096,1, y is 4,12,80
+            ss = [torch.cat([s.type(torch.float32), item], 1) for item in zs[1:]]
         else:
             # TODO-multiply the s vector as well?
             ys = [y] * len(self.blocks)
+            ss = [s] * len(self.blocks)
         # This is the change we made to the Big-GAN generator architecture.
         # The input goes into classes go into the first layer only.
         if self.first_layer:
@@ -401,7 +409,7 @@ class Generator(nn.Module):
         for index, blocklist in enumerate(self.blocks):
             # Second inner loop in case block has multiple layers
             for block in blocklist:
-                h = block(h, ys[index])
+                h = block(h, ys[index],ss[index])
 
         # Apply batchnorm-relu-conv-tanh at output
         return torch.tanh(self.output_layer(h))

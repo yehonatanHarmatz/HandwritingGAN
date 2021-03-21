@@ -12,7 +12,7 @@ from models.StyleEncoder_model import StyleEncoder
 
 opt = TrainOptions().parse()
 print(opt)
-device="cpu"
+device="cuda"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
@@ -33,6 +33,22 @@ for epoch in range(opt.epoch_count,
     epoch_start_time = time.time()  # timer for entire epoch
     iter_data_time = time.time()  # timer for data loading per iteration
     epoch_iter = 0  # the number of training iterations in current epoch, reset to 0
+    #print('End of epoch %d / %d \t Time Taken: %d sec' % (
+        #epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
+    correct = 0
+    #see initial guesses
+    model.eval()
+    with torch.no_grad():
+        for i, data in enumerate(te_dataset):
+            if i>=400:
+                break
+            curr_data = get_curr_data(data, opt.batch_size, 0)
+            output = model(curr_data['style'])
+            print(torch.max(output.data, 1)[1], data['label'])
+            correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
+    accuracy = 100 * correct / te_dataset_size
+    print("Test Accuracy = {}".format(accuracy))
+    model.train()
     for i, data in tqdm(enumerate(tr_dataset)):
         opt.iter = i
         iter_start_time = time.time()  # timer for computation per iteration
@@ -49,6 +65,23 @@ for epoch in range(opt.epoch_count,
         model.optimize_step()
         if total_iters % opt.print_freq == 0:
             print(model.cur_loss)
+            allocated = torch.cuda.memory_allocated() / 1024 / 1024 / 1024
+            print("torch.cuda.memory_allocated: %fGB" % allocated)
+            reserved = torch.cuda.memory_reserved() / 1024 / 1024 / 1024
+            print("torch.cuda.memory_reserved: %fGB" % reserved)
+            correct = 0
+            # see initial guesses
+            model.eval()
+            with torch.no_grad():
+                for i, data in enumerate(te_dataset):
+                    if i >= 400:
+                        break
+                    curr_data = get_curr_data(data, opt.batch_size, 0)
+                    output = model(curr_data['style'])
+                    print(torch.max(output.data, 1)[1], data['label'])
+                    correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
+            accuracy = 100 * correct / te_dataset_size
+            print("Test Accuracy = {}".format(accuracy))
         # if total_iters > 80:
         #     break
         # if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
@@ -90,7 +123,7 @@ for epoch in range(opt.epoch_count,
             curr_data = get_curr_data(data, opt.batch_size, 0)
             output = model(curr_data['style'])
             print(torch.max(output.data, 1)[1], data['label'])
-            correct += (torch.max(output.data, 1)[1] == data['label']).sum().item()
+            correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
     accuracy = 100 * correct / te_dataset_size
     print("Test Accuracy = {}".format(accuracy))
     # model.update_learning_rate()  # update learning rates at the end of every epoch.

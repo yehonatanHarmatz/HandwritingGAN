@@ -28,22 +28,25 @@ class StyleEncoder(nn.Module):
     def __init__(self, already_trained=False, path=None,device="cuda", **kwargs):
         super(StyleEncoder, self).__init__()
         self.name = 'S'
-
+        self.device=device
         self.cur_loss = torch.zeros(1)
         self.loss = nn.CrossEntropyLoss()
+        self.n_labels=396
         if already_trained:
-            self.vgg = prepare_vgg_extractor(path=path,device=device)
+            self.vgg = self.prepare_vgg_extractor(path=path)
         else:
-            self.vgg = prepare_vgg_extractor(device=device)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
+            self.vgg = self.prepare_vgg_extractor(index_freeze=0)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
         # print(self.vgg)
         self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),
-                                          lr=0.1)
-        self.device=device
+                                          lr=0.0001,weight_decay=100)
 
     def forward(self, x, *input):
         return self.vgg(x)
 
     def backward(self, x, *input):
+        #hot_vector=torch.zeros((self.data['label'].squeeze(0).shape[0],self.n_labels)).to(self.device)
+        #for i,label in enumerate(self.data['label']):
+            #hot_vector[i,label]=1
         loss = self.loss(x, self.data['label'])
         self.cur_loss = loss
         loss.backward()
@@ -65,49 +68,49 @@ class StyleEncoder(nn.Module):
         torch.save(self.vgg.state_dict(), f"checkpoints/vgg{epoch}")
 
 
-def prepare_vgg_extractor(index_freeze=40, path="",device="cuda"):
-    # option to load our-trained vgg
-    if path == "":
-        vgg19 = vgg19_bn(pretrained=True).to(device)#.to("cpu")  # .eval()
-        freeze_network(vgg19, index_freeze)
-        replace_head(vgg19, 396)
-    else:
-        vgg19 = torch.load(path).to(device)
-        freeze_network(vgg19)
-    """model.half()  # convert to half precision
-    for layer in model.modules():
-        if isinstance(layer, nn.BatchNorm2d):
-            layer.float()
-    """
-    vgg19.to(device)
-    # print(dir(vgg19))
-    # print(vgg19.modules)
-    # modules=list(resnet152.children())[:-1]
-    # resnet152=nn.Sequential(*modules)
-    vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
-    # print(vgg19_fearures.modules)
-    # x = torch.zeros([1, 3, 224, 224]).to("cpu")
-    # print(vgg19(x))
-    # print(vgg19_fearures(x).shape)
+    def prepare_vgg_extractor(self,index_freeze=40, path=""):
+        # option to load our-trained vgg
+        if path == "":
+            vgg19 = vgg19_bn(pretrained=True).to(self.device)#.to("cpu")  # .eval()
+            freeze_network(vgg19, index_freeze)
+            replace_head(vgg19, self.n_labels)
+        else:
+            vgg19 = torch.load(path).to(self.device)
+            freeze_network(vgg19)
+        """model.half()  # convert to half precision
+        for layer in model.modules():
+            if isinstance(layer, nn.BatchNorm2d):
+                layer.float()
+        """
+        vgg19.to(self.device)
+        # print(dir(vgg19))
+        # print(vgg19.modules)
+        # modules=list(resnet152.children())[:-1]
+        # resnet152=nn.Sequential(*modules)
+        vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
+        # print(vgg19_fearures.modules)
+        # x = torch.zeros([1, 3, 224, 224]).to("cpu")
+        # print(vgg19(x))
+        # print(vgg19_fearures(x).shape)
 
-    # print("features,", vgg19.features)
-    # print("classfifier,", vgg19.classifier)
-    # print("paarmas,", list(vgg19.parameters()))
-    # print([(i, 1) for i, f in enumerate(vgg19.parameters()) if f.requires_grad])
-    # print(sum([1 for f in vgg19.classifier if f.requires_grad]))
-    child_counter = 0
-    """for child in vgg19.children():
-        print(" child", child_counter, "is:")
-        print(child)
-        print(f'len is {len(list(child.parameters()))}')
-        child_counter += 1"""
-    # see that one reqgrad and the other doesnt
-    # print(list(vgg19.features[37].parameters()))
-    # print("*" * 60)
-    # print(list(vgg19.features[38].parameters()))
-    # print("*"*60)
-    # print(list(vgg19.features[40].parameters()))
-    return vgg19
+        # print("features,", vgg19.features)
+        # print("classfifier,", vgg19.classifier)
+        # print("paarmas,", list(vgg19.parameters()))
+        # print([(i, 1) for i, f in enumerate(vgg19.parameters()) if f.requires_grad])
+        # print(sum([1 for f in vgg19.classifier if f.requires_grad]))
+        child_counter = 0
+        """for child in vgg19.children():
+            print(" child", child_counter, "is:")
+            print(child)
+            print(f'len is {len(list(child.parameters()))}')
+            child_counter += 1"""
+        # see that one reqgrad and the other doesnt
+        # print(list(vgg19.features[37].parameters()))
+        # print("*" * 60)
+        # print(list(vgg19.features[38].parameters()))
+        # print("*"*60)
+        # print(list(vgg19.features[40].parameters()))
+        return vgg19
 
 
 def freeze_network(net, index=None):
