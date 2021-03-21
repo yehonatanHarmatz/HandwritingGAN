@@ -76,7 +76,7 @@ class StyleDataset(BaseDataset):
     def __len__(self):
         return self.nSamples
 
-    def __getitem__(self, index):
+    def __getitem__(self, index,device='cuda'):
         assert index <= len(self), 'index range error'
         envAug = False
         if hasattr(self, 'env_aug'):

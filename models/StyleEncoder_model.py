@@ -25,19 +25,20 @@ class StyleEncoder(nn.Module):
                 params_to_update.append(param)
         return params_to_update
 
-    def __init__(self, already_trained=False, path=None, **kwargs):
+    def __init__(self, already_trained=False, path=None,device="cuda", **kwargs):
         super(StyleEncoder, self).__init__()
         self.name = 'S'
 
         self.cur_loss = torch.zeros(1)
         self.loss = nn.CrossEntropyLoss()
         if already_trained:
-            self.vgg = prepare_vgg_extractor(path=path)
+            self.vgg = prepare_vgg_extractor(path=path,device=device)
         else:
-            self.vgg = prepare_vgg_extractor()  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
+            self.vgg = prepare_vgg_extractor(device=device)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
         print(self.vgg)
         self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),
                                           lr=0.1)
+        self.device=device
 
     def forward(self, x, *input):
         return self.vgg(x)
@@ -57,33 +58,35 @@ class StyleEncoder(nn.Module):
 
     def set_input(self, data):
         self.data = data
+        self.data['style']=self.data['style'].to(self.device)
+        self.data['label'] = self.data['label'].to(self.device)
 
     def save_network(self):
-        torch.save(self.vgg.cpu().state_dict(), "checkpoints/vgg")
+        torch.save(self.vgg.state_dict(), "checkpoints/vgg")
 
 
-def prepare_vgg_extractor(index_freeze=40, path=""):
+def prepare_vgg_extractor(index_freeze=40, path="",device="cuda"):
     # option to load our-trained vgg
     if path == "":
-        vgg19 = vgg19_bn(pretrained=True).to("cpu")  # .eval()
+        vgg19 = vgg19_bn(pretrained=True).to(device)#.to("cpu")  # .eval()
         freeze_network(vgg19, index_freeze)
         replace_head(vgg19, 396)
     else:
-        vgg19 = torch.load(path)
+        vgg19 = torch.load(path).to(device)
         freeze_network(vgg19)
     """model.half()  # convert to half precision
     for layer in model.modules():
         if isinstance(layer, nn.BatchNorm2d):
             layer.float()
     """
-
+    vgg19.to(device)
     # print(dir(vgg19))
     print(vgg19.modules)
     # modules=list(resnet152.children())[:-1]
     # resnet152=nn.Sequential(*modules)
     vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
     print(vgg19_fearures.modules)
-    x = torch.zeros([1, 3, 224, 224]).to("cpu")
+    x = torch.zeros([1, 3, 224, 224]).to(device)
     # print(vgg19(x))
     print(vgg19_fearures(x).shape)
 

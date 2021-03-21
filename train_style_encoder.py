@@ -11,6 +11,7 @@ from util.util import get_curr_data
 from models.StyleEncoder_model import StyleEncoder
 opt = TrainOptions().parse()
 print(opt)
+device="cuda"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
@@ -26,6 +27,7 @@ model = StyleEncoder()
 t_data = 0
 for epoch in range(opt.epoch_count,
                    opt.niter + opt.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
+
     model.train()
     epoch_start_time = time.time()  # timer for entire epoch
     iter_data_time = time.time()  # timer for data loading per iteration
@@ -47,7 +49,8 @@ for epoch in range(opt.epoch_count,
             model.optimize()
             counter += 1
         model.optimize_step()
-        print(model.cur_loss)
+        if total_iters % opt.print_freq == 0:
+            print(model.cur_loss)
         # if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
         #     save_result = total_iters % opt.update_html_freq == 0
             # model.compute_visuals()
@@ -80,11 +83,12 @@ for epoch in range(opt.epoch_count,
     print('End of epoch %d / %d \t Time Taken: %d sec' % (
         epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
     correct = 0
+    #with no_grad():
     model.eval()
     for i, data in enumerate(te_dataset):
-        output = model(data['style'])
-        print(torch.max(output.data, 1)[1], data['label'])
-        correct += (torch.max(output.data, 1)[1] == data['label']).sum().item()
+        output = model(data['style'].to(device))
+        print(torch.max(output.data, 1)[1], data['label'].to(device))
+        correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
 
     accuracy = 100 * correct / te_dataset_size
 
