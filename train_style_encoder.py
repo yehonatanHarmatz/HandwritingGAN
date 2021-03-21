@@ -87,7 +87,7 @@ for epoch in range(opt.epoch_count,
     model.eval()
     for i, data in enumerate(te_dataset):
         output = model(data['style'].to(device))
-        print(torch.max(output.data, 1)[1], data['label'].to(device))
+        #print(torch.max(output.data, 1)[1], data['label'].to(device))
         correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
 
     accuracy = 100 * correct / te_dataset_size
