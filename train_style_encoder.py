@@ -3,12 +3,13 @@ import time
 from collections import OrderedDict
 
 import torch
+from PIL import Image
 from tqdm import tqdm
 
 from data import create_dataset, dataset_catalog
 from options.train_options import TrainOptions
 from util.visualizer import Visualizer
-from util.util import get_curr_data
+from util.util import get_curr_data, tensor2im
 from models.StyleEncoder_model import StyleEncoder
 
 opt = TrainOptions().parse()

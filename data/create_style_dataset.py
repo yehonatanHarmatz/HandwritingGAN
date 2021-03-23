@@ -28,7 +28,7 @@ def create_balance_data(writers_images, index=1):
 
 def create_writers_dict(top_dir,dataset, mode, words, remove_punc, writers_list=None):
     root_dir = os.path.join(top_dir, dataset)
-    output_dir = root_dir + (dataset=='IAM')*('/words'*words + '/lines'*(not words))
+    output_dir = root_dir + (dataset=='IAM')*('/words'*words + '/lines'*(not words)) + (not not writers_list)*writers_list[0]
     writers_images = defaultdict(list)
     if dataset == 'IAM':
         labels_name = 'original'
@@ -279,8 +279,8 @@ def main():
     '''
     # in a previous version we also cut the white edges of the image to keep a tight rectangle around the word but it
     # seems in all the datasets we use this is already the case so I removed it. If there are problems maybe we should add this back.
-    # create_dataset(writers_images, outputPath, mode, k, remove_punc, resize, imgH, init_gap, h_gap,
-    #                charminW, charmaxW, discard_wide, discard_narr, labeled)
+    create_dataset(writers_images, outputPath, mode, k, remove_punc, resize, imgH, init_gap, h_gap,
+                   charminW, charmaxW, discard_wide, discard_narr, labeled)
 
 
 if __name__ == '__main__':
