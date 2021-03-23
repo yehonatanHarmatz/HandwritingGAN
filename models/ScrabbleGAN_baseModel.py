@@ -151,12 +151,14 @@ class ScrabbleGANBaseModel(BaseModel):
         self.real_z_mean = None
     #TODO- add S to input G and D
     def visualize_fixed_noise(self):
+        #what should we do in that?
+        fixed_style=torch.zeros(len(self.label_fix),4096).to(self.device)
         if self.opt.single_writer:
             self.fixed_noise = self.z[0].repeat((self.fixed_noise_size, 1))
         if self.opt.one_hot:
-            images = self.netG(self.fixed_noise, self.one_hot_fixed.to(self.device))
+            images = self.netG(self.fixed_noise, self.one_hot_fixed.to(self.device),fixed_style)
         else:
-            images = self.netG(self.fixed_noise, self.fixed_text_encode_fake.to(self.device))
+            images = self.netG(self.fixed_noise, self.fixed_text_encode_fake.to(self.device),fixed_style)
 
         loss_G = loss_hinge_gen(self.netD(**{'x': images, 'z': self.fixed_noise,'s':self.input_features}), self.fixed_text_len.detach(), self.opt.mask_loss)
         # self.loss_G = loss_hinge_gen(self.netD(self.fake, self.rep_label_fake))
@@ -233,8 +235,8 @@ class ScrabbleGANBaseModel(BaseModel):
             self.len_text = self.len_text.detach()
         self.img_path = input['img_path']  # get image paths
         self.idx_real = input['idx']  # get image paths
-        #TODO- added s calced
-        self.input_features=torch.zeros((4096)).to(self.device)#self.style_encoder(style_img)
+        #TODO- added s calced with batch size in mind
+        self.input_features=torch.zeros((self.opt.batch_size,4096)).to(self.device)#self.style_encoder(style_img)
     def load_networks(self, epoch):
         BaseModel.load_networks(self, epoch)
         if self.opt.single_writer:
@@ -276,8 +278,11 @@ class ScrabbleGANBaseModel(BaseModel):
             try:
                 self.fake = self.netG(self.z, self.one_hot_fake,self.input_features)
             except Exception as e:
+                import traceback
                 print(words)
                 print(e)
+                traceback.print_stack()
+                traceback.print_exc()
         else:
             self.fake = self.netG(self.z, self.text_encode_fake,self.input_features)  # generate output image given the input data_A
     #TODO- add S input to D
@@ -525,3 +530,5 @@ class ScrabbleGANBaseModel(BaseModel):
         self.loss_G.backward()
         self.optimizer_G.step()
 
+    def get_current_fake_labels(self):
+        return self.words,self.label

@@ -76,6 +76,9 @@ class Visualizer():
         if self.display_id > 0:  # connect to a visdom server given <display_port> and <display_server>
             import visdom
             self.ncols = opt.display_ncols
+            #TODO- moved here
+            #self.create_visdom_connections()
+            #self.vis = visdom.Visdom(server=opt.display_server, port=opt.display_port, env=opt.display_env)
             try:
                 self.vis = visdom.Visdom(server=opt.display_server, port=opt.display_port, env=opt.display_env)
                 if not self.vis.check_connection():

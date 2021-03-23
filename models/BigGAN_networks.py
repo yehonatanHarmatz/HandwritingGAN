@@ -242,9 +242,11 @@ class Generator(nn.Module):
             bn_linear = functools.partial(self.which_linear, bias=False)
         if self.G_shared:
             input_size = self.shared_dim + self.z_chunk_size
+        #TODO- handle if self.first_layer?
         elif self.hier:
             if self.first_layer:
-                input_size = self.z_chunk_size
+                #we insert z also as noise with s
+                input_size = self.z_chunk_size +4096+ self.z_chunk_size
             else:
                 input_size = self.n_classes + self.z_chunk_size +4096
             self.which_bn = functools.partial(layers.ccbn,

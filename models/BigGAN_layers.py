@@ -308,7 +308,7 @@ class ccbn(nn.Module):
             self.register_buffer('stored_mean', torch.zeros(output_size))
             self.register_buffer('stored_var', torch.ones(output_size))
 
-    def forward(self, x, y,s):
+    def forward(self, x, y):
         # Calculate class-conditional gains and biases
         gain = (1 + self.gain(y)).view(y.size(0), -1, 1, 1)
         bias = self.bias(y).view(y.size(0), -1, 1, 1)
@@ -403,16 +403,23 @@ class GBlock(nn.Module):
         self.upsample = upsample
 
     def forward(self, x, y,s):
-        print("for 1")
-        h = self.activation(self.bn1(x, y,s))
-        print("for 2")
+        #print("for 1")
+        #print(f'x shape is {x.shape}, y shape is {y.shape},s shape is {s.shape}')
+        inp=torch.cat([y,s],1)
+        h = self.activation(self.bn1(x, inp))
+        #print("for 2")
+        #new - 4,512,8,96
+        # old- ?
+        #print(f'h shape is {h.shape}')
         # h = self.activation(x)
         # h=x
         if self.upsample:
             h = self.upsample(h)
             x = self.upsample(x)
+        #print("for 3")
         h = self.conv1(h)
-        h = self.activation(self.bn2(h, y,s))
+        h = self.activation(self.bn2(h, inp))
+        #print("for 4")
         # h = self.activation(h)
         h = self.conv2(h)
         if self.learnable_sc:
