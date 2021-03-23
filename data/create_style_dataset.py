@@ -246,17 +246,26 @@ def main():
     charminW = 16  # The minimum character width
     h_gap = 0  # Insert a gap below and above the text
     discard_wide = True  # Discard images which have a character width 3 times larger than the maximum allowed character size (instead of resizing them) - this helps discard outlier images
-    discard_narr = True  # Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
+    discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
     if mode == 'tr':
         create_balance_data(writers_images)
-    # writers = list(map(int, list(writers_images.keys())))
-    # map_index = {writers[i]:i for i in range(len(writers))}
+    # writers_tr = list(map(int, list(writers_images_tr.keys())))
+    # writers_tr.sort()
+    # map_index_tr = {writers_tr[i]:i for i in range(len(writers_tr))}
     # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)]) for wr in writers_images], reverse=True))
     '''
-    mode = 'te'
+    mode = 'val'
     writers_images_te, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
+    writers_te = list(map(int, list(writers_images_te.keys())))
+    writers_te.sort()
+    map_index_te = {writers_te[i]: i for i in range(len(writers_te))}
+    # pprint(map_index_tr)
+    # pprint(map_index_te)
+    for k, v in map_index_tr.items():
+        if map_index_te[k] != v:
+            print('AAAA ' + str(k) + ' ' + str(map_index_te[k]) + ' ' +str(v))
     if sorted(list(writers_images_tr.keys())) != sorted(list(writers_images_te.keys())):
         print('AAAAAA')
     print(sorted(list(writers_images_tr.keys())))

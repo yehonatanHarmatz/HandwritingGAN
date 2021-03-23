@@ -339,7 +339,7 @@ def concat_images(tf_arr):
     #                 mode='constant', value=0) for tf in tf_arr]
     pad_tf = [F.pad(input=tf,
                     pad=[0, (max_y - tf.shape[2])],
-                    mode='constant', value=255) for tf in tf_arr]
+                    mode='constant', value=256) for tf in tf_arr]
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
     tf = torch.cat(pad_tf, 1)
