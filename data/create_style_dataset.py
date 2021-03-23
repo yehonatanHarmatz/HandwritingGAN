@@ -3,6 +3,7 @@ import os
 import shutil
 import random
 from collections import defaultdict
+from pprint import pprint
 
 import lmdb
 import xmltodict
@@ -12,6 +13,17 @@ import numpy as np
 import html
 from util.util import writeCache, dict_to_binary
 from tempfile import TemporaryFile
+
+def create_balance_data(writers_images, index=1):
+    m = sorted([len(v) for _, v in writers_images.items()], reverse=True)[index]
+    for wr, l in writers_images.items():
+        add = m - len(l)
+        if add > 0:
+            l2 = random.choices(l, k=add)
+            l.extend(l2)
+        elif add < 0:
+            l2 = random.sample(l, m)
+            writers_images[wr] = l2
 
 
 def create_writers_dict(top_dir,dataset, mode, words, remove_punc):
@@ -149,7 +161,8 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
         os.makedirs(outputPath)
     else:
         os.makedirs(outputPath)
-    env = lmdb.open(outputPath, map_size=1073741824)
+    a = 0.5 if mode in ['val', 'test'] else 5
+    env = lmdb.open(outputPath, map_size=int(a*1073741824))
     cache = {}
     nSamples = 0
     cnt = 1
@@ -236,7 +249,11 @@ def main():
     discard_narr = True  # Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
-    print(sorted([(len(writers_images[wr]), wr) for wr in writers_images], reverse=True))
+    if mode == 'tr':
+        create_balance_data(writers_images)
+    # writers = list(map(int, list(writers_images.keys())))
+    # map_index = {writers[i]:i for i in range(len(writers))}
+    # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)]) for wr in writers_images], reverse=True))
     '''
     mode = 'te'
     writers_images_te, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)

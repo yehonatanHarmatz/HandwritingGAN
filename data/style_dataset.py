@@ -22,6 +22,8 @@ class StyleDataset(BaseDataset):
         #                     help='use regular collate function in data loader')
         parser.add_argument('--aug_dataroot', type=str, default=None,
                             help='augmentation images file location, default is None (no augmentation)')
+        parser.add_argument('--device', type=str, default='cuda',
+                            help='device')
         parser.add_argument('--aug', action='store_true', default=False,
                             help='use augmentation (currently relevant for OCR training)')
         parser.add_argument('--k', type=int, default=15,
@@ -72,11 +74,12 @@ class StyleDataset(BaseDataset):
         #     self.collate_fn = RegularCollator(opt)
 
         self.labeled = opt.labeled
+        self.device = opt.device
 
     def __len__(self):
         return self.nSamples
 
-    def __getitem__(self, index,device='cuda'):
+    def __getitem__(self, index):
         assert index <= len(self), 'index range error'
         envAug = False
         if hasattr(self, 'env_aug'):
@@ -95,7 +98,7 @@ class StyleDataset(BaseDataset):
                 buf.write(imgbuf)
                 buf.seek(0)
                 try:
-                    img = ToTensor()(Image.open(buf)).to(device)
+                    img = ToTensor()(Image.open(buf)).to(self.device)
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
