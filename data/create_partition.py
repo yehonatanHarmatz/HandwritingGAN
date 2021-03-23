@@ -78,9 +78,9 @@ def write_partition(outputPath, name, files_names):
         f.writelines(files_names)
 
 
-def create_partition(writers_images, outputPath, tr=0.6, test=0.2, gan_test=0.2):
+def create_partition(writers_images, outputPath, tr=0.6, val=0.1, test=0.1, gan_test=0.2):
     writers = sorted([(sum(writers_images[i].values()), int(i)) for i in writers_images.keys()], reverse=True)
-    trte = tr + test
+    trte = float(tr + test + val).__round__(4)
     trte_writers = []
     gan_writers = []
     trte_amount = 0
@@ -99,15 +99,23 @@ def create_partition(writers_images, outputPath, tr=0.6, test=0.2, gan_test=0.2)
     write_partition(outputPath, 'gan_test.lst', sorted(gan_files))
     # trte_files = [s+'\n' for w_id in trte_writers for s in writers_images[w_id].keys()]
     tr_files = []
+    val_files = []
     te_files = []
+    valtest = val+test
     for w_id in trte_writers:
         files = [f+'\n' for f in writers_images[str(w_id).zfill(3)].keys()]
         if files:
-            x, y = train_test_split(files, train_size=tr/trte, test_size=test/trte)
+            x, y = train_test_split(files, train_size=tr/trte, test_size=(valtest)/trte)
             tr_files.extend(x)
-            te_files.extend(y)
+            if len(y) > 1:
+                a, b = train_test_split(y, train_size=val/valtest, test_size=test/valtest)
+                val_files.extend(a)
+                te_files.extend(b)
+            else:
+                val_files.extend(y)
     write_partition(outputPath, 'tr.lst', sorted(tr_files))
     write_partition(outputPath, 'te.lst', sorted(te_files))
+    write_partition(outputPath, 'val.lst', sorted(val_files))
 
 
 

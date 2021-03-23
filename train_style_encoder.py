@@ -82,8 +82,8 @@ for epoch in range(opt.epoch_count,
                     correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
             accuracy = 100 * correct / te_dataset_size
             print("Test Accuracy = {}".format(accuracy))
-        # if total_iters > 80:
-        #     break
+        if total_iters > 1000:
+            break
         # if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
         #     save_result = total_iters % opt.update_html_freq == 0
             # model.compute_visuals()
