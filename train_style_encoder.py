@@ -1,5 +1,6 @@
 import os
 import time
+from collections import OrderedDict
 
 import torch
 from tqdm import tqdm
@@ -12,7 +13,7 @@ from models.StyleEncoder_model import StyleEncoder
 
 opt = TrainOptions().parse()
 print(opt)
-device="cuda"
+device="cpu"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
@@ -24,8 +25,9 @@ print(te_dataset_size)
 total_iters = 0  # the total number of training iterations
 opt.iter = 0
 model = StyleEncoder(device=device)
-# visualizer = Visualizer(opt)
+visualizer = Visualizer(opt)
 t_data = 0
+c_print = 0
 for epoch in range(opt.epoch_count,
                    opt.niter + opt.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
 
@@ -37,6 +39,7 @@ for epoch in range(opt.epoch_count,
         #epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
     correct = 0
     #see initial guesses
+    '''
     model.eval()
     with torch.no_grad():
         for i, data in enumerate(te_dataset):
@@ -49,6 +52,7 @@ for epoch in range(opt.epoch_count,
     accuracy = 100 * correct / te_dataset_size
     print("Test Accuracy = {}".format(accuracy))
     model.train()
+    '''
     for i, data in tqdm(enumerate(tr_dataset)):
         opt.iter = i
         iter_start_time = time.time()  # timer for computation per iteration
@@ -73,12 +77,14 @@ for epoch in range(opt.epoch_count,
             # see initial guesses
             model.eval()
             with torch.no_grad():
+                val_loss = 0
                 for i, data in enumerate(te_dataset):
-                    if i >= 400:
-                        break
+                    # if i >= 400:
+                    #     break
                     curr_data = get_curr_data(data, opt.batch_size, 0)
                     output = model(curr_data['style'])
-                    print(torch.max(output.data, 1)[1], data['label'])
+                    val_loss += model.loss(output, curr_data['label'])
+                    # print(torch.max(output.data, 1)[1], data['label'])
                     correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
             accuracy = 100 * correct / te_dataset_size
             print("Test Accuracy = {}".format(accuracy))
@@ -86,14 +92,17 @@ for epoch in range(opt.epoch_count,
             break
         # if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
         #     save_result = total_iters % opt.update_html_freq == 0
-            # model.compute_visuals()
+        #     model.compute_visuals()
 
-        # if total_iters % opt.print_freq == 0:  # print training losses and save logging information to the disk
-        #     losses = [model.cur_loss]
-            # t_comp = (time.time() - iter_start_time) / (opt.batch_size * opt.num_accumulations)
-            # visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
-            # if opt.display_id > 0:
-            #     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, losses)
+        if total_iters // opt.print_freq > c_print:  # print training losses and save logging information to the disk
+            c_print += 1
+            losses = OrderedDict()
+            losses['train'] = model.cur_loss
+            losses['val'] = val_loss
+            t_comp = (time.time() - iter_start_time) / (opt.batch_size * opt.num_accumulations)
+            visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
+            if opt.display_id > 0:
+                visualizer.plot_current_losses(epoch, float(epoch_iter) / tr_dataset_size, losses)
         '''
         if total_iters % opt.save_latest_freq == 0:  # cache our latest model every <save_latest_freq> iterations
             print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
