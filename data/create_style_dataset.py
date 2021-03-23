@@ -26,7 +26,7 @@ def create_balance_data(writers_images, index=1):
             writers_images[wr] = l2
 
 
-def create_writers_dict(top_dir,dataset, mode, words, remove_punc):
+def create_writers_dict(top_dir,dataset, mode, words, remove_punc, writers_list=None):
     root_dir = os.path.join(top_dir, dataset)
     output_dir = root_dir + (dataset=='IAM')*('/words'*words + '/lines'*(not words))
     writers_images = defaultdict(list)
@@ -77,6 +77,8 @@ def create_writers_dict(top_dir,dataset, mode, words, remove_punc):
                     annotation_content = xmltodict.parse(line)
                     lines = annotation_content['form']['handwritten-part']['line']
                     writer = annotation_content['form']['@writer-id']
+                    if writers_list and writer not in writers_list:
+                        continue
                     if words:
                         lines_list = []
                         for j in range(len(lines)):
@@ -248,13 +250,13 @@ def main():
     discard_wide = True  # Discard images which have a character width 3 times larger than the maximum allowed character size (instead of resizing them) - this helps discard outlier images
     discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
-    writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
+    writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc, writers_list=['588', '150', '154'])
     if mode == 'tr':
         create_balance_data(writers_images)
-    # writers_tr = list(map(int, list(writers_images_tr.keys())))
+    # writers_tr = list(map(int, list(writers_images.keys())))
     # writers_tr.sort()
-    # map_index_tr = {writers_tr[i]:i for i in range(len(writers_tr))}
-    # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)]) for wr in writers_images], reverse=True))
+    # map_index = {writers_tr[i]:i for i in range(len(writers_tr))}
+    # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)], int(wr)) for wr in writers_images], reverse=True))
     '''
     mode = 'val'
     writers_images_te, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
@@ -277,8 +279,8 @@ def main():
     '''
     # in a previous version we also cut the white edges of the image to keep a tight rectangle around the word but it
     # seems in all the datasets we use this is already the case so I removed it. If there are problems maybe we should add this back.
-    create_dataset(writers_images, outputPath, mode, k, remove_punc, resize, imgH, init_gap, h_gap,
-                   charminW, charmaxW, discard_wide, discard_narr, labeled)
+    # create_dataset(writers_images, outputPath, mode, k, remove_punc, resize, imgH, init_gap, h_gap,
+    #                charminW, charmaxW, discard_wide, discard_narr, labeled)
 
 
 if __name__ == '__main__':
