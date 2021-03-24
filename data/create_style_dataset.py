@@ -28,7 +28,7 @@ def create_balance_data(writers_images, index=1):
 
 def create_writers_dict(top_dir,dataset, mode, words, remove_punc, writers_list=None):
     root_dir = os.path.join(top_dir, dataset)
-    output_dir = root_dir + (dataset=='IAM')*('/words'*words + '/lines'*(not words)) + (not not writers_list)*writers_list[0]
+    output_dir = root_dir + (dataset=='IAM')*('/words'*words + '/lines'*(not words)) + (not not writers_list)*'specific'
     writers_images = defaultdict(list)
     if dataset == 'IAM':
         labels_name = 'original'
@@ -250,7 +250,7 @@ def main():
     discard_wide = True  # Discard images which have a character width 3 times larger than the maximum allowed character size (instead of resizing them) - this helps discard outlier images
     discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
-    writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc, writers_list=['588', '150', '154'])
+    writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
     if mode == 'tr':
         create_balance_data(writers_images)
     # writers_tr = list(map(int, list(writers_images.keys())))

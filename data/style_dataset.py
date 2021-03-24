@@ -111,6 +111,12 @@ class StyleDataset(BaseDataset):
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
             # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
             imgs_tensor = concat_images(imgs)
+            # im = tensor2im(imgs_tensor.unsqueeze(0))
+            # img = Image.fromarray(im, 'RGB')
+            # img.resize((img.size[0], 224))
+            # img.show()
+            # imgs_tensor = ToTensor()(im).to(self.device)
+            imgs_tensor = torchvision.transforms.Normalize([0,0,0], [1,1,1], inplace=False)(imgs_tensor)
             item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index}
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
