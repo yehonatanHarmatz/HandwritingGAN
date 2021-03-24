@@ -14,7 +14,7 @@ datasets = {"RIMEScharH32W16": _DATA_ROOT+'RIMES/h32char16to17/tr',
             "style15IAMcharH32rmPunct": _DATA_ROOT + 'IAM\\words\\h32char16to17\k\\15\\tr_removePunc',
             "style15IAMcharH32rmPunct_te": _DATA_ROOT + 'IAM\\words\\h32char16to17\k\\15\\te_removePunc',
             "style15IAMcharH32rmPunct_val": _DATA_ROOT + 'IAM\\words\\h32char16to17\k\\15\\val_removePunc',
-            "style15IAMcharH32rmPunct_val_small": _DATA_ROOT + 'IAM\\words588\\h32char16to17\k\\15\\val_removePunc',
+            "style15IAMcharH32rmPunct_small_val": _DATA_ROOT + 'IAM\\words588\\h32char16to17\k\\15\\val_removePunc',
             "style15IAMcharH32rmPunct_small": _DATA_ROOT + 'IAM\\words588\\h32char16to17\k\\15\\tr_removePunc',
 
             "CVLcharH32W16": _DATA_ROOT+'CVL/h32char16to17/tr',

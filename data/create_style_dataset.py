@@ -229,7 +229,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'tr'  # tr/te/val/va1/va2/all
+    mode = 'val'  # tr/te/val/va1/va2/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:
@@ -252,9 +252,9 @@ def main():
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
     if mode == 'tr':
-        create_balance_data(writers_images,multiply=3)
+        create_balance_data(writers_images,multiply=10)
     elif mode=='val':
-        create_balance_data(writers_images,multiply=3)
+        create_balance_data(writers_images,multiply=10)
     # writers_tr = list(map(int, list(writers_images.keys())))
     # writers_tr.sort()
     # map_index = {writers_tr[i]:i for i in range(len(writers_tr))}

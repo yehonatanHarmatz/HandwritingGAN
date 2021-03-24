@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import torch
 from PIL import Image
+from torch.cuda.amp import GradScaler
 from tqdm import tqdm
 
 from data import create_dataset, dataset_catalog
@@ -14,25 +15,28 @@ from models.StyleEncoder_model import StyleEncoder
 
 opt = TrainOptions().parse()
 print(opt)
+torch.backends.cudnn.benchmark = True
 device="cuda"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
-opt.dataname = "style15IAMcharH32rmPunct_val_small"
+opt.dataname += "_val"
 opt.dataroot = dataset_catalog.datasets[opt.dataname]
+opt.scaler= GradScaler()
 te_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 te_dataset_size = len(te_dataset)
 print(te_dataset_size)
 total_iters = 0  # the total number of training iterations
 opt.iter = 0
-model = StyleEncoder(device=device)
+model = StyleEncoder(opt,device=device)
 visualizer = Visualizer(opt)
 t_data = 0
+c_print = 0
+c_save = 0
+c_display = 0
 for epoch in range(opt.epoch_count,
                    opt.niter + opt.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
-    c_print = 0
-    c_save = 0
-    c_display=0
+
     model.train()
     epoch_start_time = time.time()  # timer for entire epoch
     iter_data_time = time.time()  # timer for data loading per iteration
@@ -71,6 +75,8 @@ for epoch in range(opt.epoch_count,
         model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
         model.optimize()
         model.optimize_step()
+        if opt.autocast_bit:
+            opt.scaler.update()
         if total_iters // opt.display_freq > c_display:
             c_display+=1
             print(model.cur_loss)
@@ -116,7 +122,7 @@ for epoch in range(opt.epoch_count,
             c_save+=1
             print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
             save_suffix = 'iter_%d' % total_iters if opt.save_by_iter else 'latest'
-            model.save_network(save_suffix)
+            #model.save_network(save_suffix)
 
         if device == 'cuda':
             for i in opt.gpu_ids:
@@ -136,27 +142,32 @@ for epoch in range(opt.epoch_count,
         epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
     correct = 0
     model.eval()
+    counter_i=0
     with torch.no_grad():
         for i, data in enumerate(te_dataset):
-            if i >= 200:
-                break
+            #if i >= 200:
+                #break
+            counter_i +=opt.batch_size
             curr_data = get_curr_data(data, opt.batch_size, 0)
             output = model(curr_data['style'])
             print(f"Test: {torch.max(output.data, 1)[1]}, {data['label']}")
             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
-    accuracy = 100 * correct / te_dataset_size
+    accuracy = 100 * correct / counter_i
     print("Test Accuracy = {}".format(accuracy))
     correct = 0
+    counter_i = 0
     with torch.no_grad():
         for i, data in enumerate(tr_dataset):
-            if i >= 200:
-                break
+            #if i >= 200:
+                #break
+            counter_i += opt.batch_size
             curr_data = get_curr_data(data, opt.batch_size, 0)
             output = model(curr_data['style'])
-            print(torch.max(output.data, 1)[1], data['label'])
+            print(f"{i}/{tr_dataset_size//opt.batch_size}:{torch.max(output.data, 1)[1]}, {data['label']}")
             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
-    accuracy = 100 * correct / tr_dataset_size
+    accuracy = 100 * correct / counter_i
     print("Train Accuracy = {}".format(accuracy))
     # model.update_learning_rate()  # update learning rates at the end of every epoch.
     print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
     model.save_network(epoch)
+    model.train()

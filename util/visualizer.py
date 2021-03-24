@@ -3,7 +3,7 @@ import os
 import sys
 import ntpath
 import time
-from . import util, html
+from . import util, html_util
 from subprocess import Popen, PIPE
 #from scipy.misc import imresize
 import cv2
@@ -187,7 +187,7 @@ class Visualizer():
                 util.save_image(image_numpy, img_path)
 
             # update website
-            webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=1)
+            webpage = html_util.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=1)
             for n in range(epoch, 0, -1):
                 webpage.add_header('epoch [%d]' % n)
                 ims, txts, links = [], [], []
