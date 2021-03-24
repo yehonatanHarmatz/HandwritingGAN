@@ -34,6 +34,7 @@ class StyleEncoder(nn.Module):
         self.name = 'S'
         self.device=device
         self.cur_loss = torch.zeros(1)
+        self.val_loss = torch.zeros(1)
         self.loss = nn.CrossEntropyLoss()
         self.n_labels=396
         if already_trained:
@@ -51,8 +52,15 @@ class StyleEncoder(nn.Module):
                                           #lr=0.001)
 
 
-    def forward(self, x, *input):
-        return self.vgg(x)
+    def forward(self, x, *input, save_loss=False, train=True):
+        y = self.vgg(x)
+        if save_loss:
+            loss = self.loss(x, self.data['label'])
+            if train:
+                self.cur_loss += loss
+            else:
+                self.val_loss += loss
+        return y
 
     def backward(self, *input):
         if self.mixed:
@@ -66,7 +74,7 @@ class StyleEncoder(nn.Module):
         with autocast() if self.mixed else contextlib.nullcontext():
             x = self.forward(self.data['style'])
             loss = self.loss(x, self.data['label'])
-            self.cur_loss = loss
+            self.cur_loss += loss
         scale(loss).backward()
 
     def optimize(self):
@@ -87,7 +95,9 @@ class StyleEncoder(nn.Module):
     def save_network(self, epoch):
         torch.save(self.vgg.state_dict(), f"checkpoints/vgg{epoch}")
 
-
+    def zero_loss(self):
+        self.cur_loss = torch.zeros(1)
+        self.val_loss = torch.zeros(1)
     def prepare_vgg_extractor(self,index_freeze=40, path="",name="resnet"):
         # option to load our-trained vgg
         if path == "":

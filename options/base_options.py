@@ -225,6 +225,9 @@ class BaseOptions():
             '--batch_size', type=int, default=8,
             help='Default overall batchsize (default: %(default)s)')
         parser.add_argument(
+            '--batch_size_test', type=int, default=0,
+            help='batchsize for test (default: %(default)s)')
+        parser.add_argument(
             '--G_batch_size', type=int, default=0,
             help='Batch size to use for G; if 0, same as D (default: %(default)s)')
         parser.add_argument(
