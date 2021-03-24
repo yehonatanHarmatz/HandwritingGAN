@@ -116,7 +116,7 @@ class StyleDataset(BaseDataset):
             # img.resize((img.size[0], 224))
             # img.show()
             # imgs_tensor = ToTensor()(im).to(self.device)
-            imgs_tensor = torchvision.transforms.Normalize([0,0,0], [1,1,1], inplace=False)(imgs_tensor)
+            # imgs_tensor = torchvision.transforms.Normalize([0,0,0], [1,1,1], inplace=False)(imgs_tensor)
             item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index}
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
