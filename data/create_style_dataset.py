@@ -14,8 +14,8 @@ import html
 from util.util import writeCache, dict_to_binary
 from tempfile import TemporaryFile
 
-def create_balance_data(writers_images, index=1):
-    m = sorted([len(v) for _, v in writers_images.items()], reverse=True)[index]
+def create_balance_data(writers_images, index=1,multiply=1):
+    m = multiply*sorted([len(v) for _, v in writers_images.items()], reverse=True)[index]
     for wr, l in writers_images.items():
         add = m - len(l)
         if add > 0:
@@ -252,7 +252,9 @@ def main():
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc, writers_list=['588', '150', '154'])
     if mode == 'tr':
-        create_balance_data(writers_images)
+        create_balance_data(writers_images,multiply=3)
+    elif mode=='val':
+        create_balance_data(writers_images,multiply=3)
     # writers_tr = list(map(int, list(writers_images.keys())))
     # writers_tr.sort()
     # map_index = {writers_tr[i]:i for i in range(len(writers_tr))}
