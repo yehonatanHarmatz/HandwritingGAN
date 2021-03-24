@@ -54,7 +54,7 @@ class StyleEncoder(nn.Module):
     def forward(self, x, *input):
         return self.vgg(x)
 
-    def backward(self, x, *input):
+    def backward(self, *input):
         if self.mixed:
             scale = self.scaler.scale
             factor_scale= lambda x: [item * 1./self.scaler.get_scale() for item in x]
