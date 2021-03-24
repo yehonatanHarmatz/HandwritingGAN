@@ -2,6 +2,7 @@ from torch import nn
 import torch
 from torchvision.models import vgg19_bn
 from torchvision.models import vgg16
+from torchvision.models import resnet18
 # import dominate
 import os
 
@@ -31,14 +32,18 @@ class StyleEncoder(nn.Module):
         self.device=device
         self.cur_loss = torch.zeros(1)
         self.loss = nn.CrossEntropyLoss()
-        self.n_labels=396
+        self.n_labels=3#96
         if already_trained:
             self.vgg = self.prepare_vgg_extractor(path=path)
         else:
             self.vgg = self.prepare_vgg_extractor(index_freeze=0)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
         # print(self.vgg)
-        self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),
-                                          lr=0.0001,weight_decay=100)
+        #self.vgg.parameters()
+        #
+        self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),lr=0.005*0.1,weight_decay=0*0.05)
+        #torch.optim.Adam(model.parameters(),
+                                          #lr=0.001)
+
 
     def forward(self, x, *input):
         return self.vgg(x)
@@ -71,8 +76,9 @@ class StyleEncoder(nn.Module):
     def prepare_vgg_extractor(self,index_freeze=40, path=""):
         # option to load our-trained vgg
         if path == "":
-            vgg19 = vgg19_bn(pretrained=True).to(self.device)#.to("cpu")  # .eval()
-            freeze_network(vgg19, index_freeze)
+            vgg19 = model_ft = vgg19_bn(pretrained=True).to(self.device) ##.to("cpu")  # .eval()resnet18(pretrained=True)
+            #print(vgg19.modules)
+            freeze_network(vgg19, 0)
             replace_head(vgg19, self.n_labels)
         else:
             vgg19 = torch.load(path).to(self.device)
@@ -82,12 +88,12 @@ class StyleEncoder(nn.Module):
             if isinstance(layer, nn.BatchNorm2d):
                 layer.float()
         """
-        vgg19.to(self.device)
+        vgg19 = vgg19.to(self.device)
         # print(dir(vgg19))
-        # print(vgg19.modules)
+        print(vgg19.modules)
         # modules=list(resnet152.children())[:-1]
         # resnet152=nn.Sequential(*modules)
-        vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
+        #vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
         # print(vgg19_fearures.modules)
         # x = torch.zeros([1, 3, 224, 224]).to("cpu")
         # print(vgg19(x))
@@ -124,10 +130,12 @@ def freeze_network(net, index=None):
                 param.requires_grad = False
 
 
-def replace_head(model, num_writers):
+def replace_head(model, num_writers,name="vgg"):
     # replace the output of 1000 pictures with num_wrtiers layer
     num_ftrs = model.classifier[6].in_features
     model.classifier[6] = nn.Linear(num_ftrs, num_writers)
+    #num_ftrs = model.fc.in_features
+    #model.fc=nn.Linear(num_ftrs, num_writers)
     # input_size = 224
 
 

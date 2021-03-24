@@ -14,11 +14,11 @@ from models.StyleEncoder_model import StyleEncoder
 
 opt = TrainOptions().parse()
 print(opt)
-device="cpu"
+device="cuda"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
-opt.dataname = "style15IAMcharH32rmPunct_te"
+opt.dataname = "style15IAMcharH32rmPunct_val_small"
 opt.dataroot = dataset_catalog.datasets[opt.dataname]
 te_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 te_dataset_size = len(te_dataset)
@@ -28,10 +28,11 @@ opt.iter = 0
 model = StyleEncoder(device=device)
 visualizer = Visualizer(opt)
 t_data = 0
-c_print = 0
 for epoch in range(opt.epoch_count,
                    opt.niter + opt.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
-
+    c_print = 0
+    c_save = 0
+    c_display=0
     model.train()
     epoch_start_time = time.time()  # timer for entire epoch
     iter_data_time = time.time()  # timer for data loading per iteration
@@ -55,9 +56,11 @@ for epoch in range(opt.epoch_count,
     model.train()
     '''
     for i, data in tqdm(enumerate(tr_dataset)):
+        #if i>1000/opt.batch_size:
+            #break
         opt.iter = i
         iter_start_time = time.time()  # timer for computation per iteration
-        if total_iters % opt.print_freq == 0:
+        if total_iters // opt.print_freq > c_print:
             t_data = iter_start_time - iter_data_time
         total_iters += opt.batch_size
         epoch_iter += opt.batch_size
@@ -68,7 +71,8 @@ for epoch in range(opt.epoch_count,
         model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
         model.optimize()
         model.optimize_step()
-        if total_iters % opt.print_freq == 0:
+        if total_iters // opt.display_freq > c_display:
+            c_display+=1
             print(model.cur_loss)
             allocated = torch.cuda.memory_allocated() / 1024 / 1024 / 1024
             print("torch.cuda.memory_allocated: %fGB" % allocated)
@@ -76,7 +80,7 @@ for epoch in range(opt.epoch_count,
             print("torch.cuda.memory_reserved: %fGB" % reserved)
             correct = 0
             # see initial guesses
-            model.eval()
+            """model.eval()
             with torch.no_grad():
                 val_loss = 0
                 for i, data in enumerate(te_dataset):
@@ -84,13 +88,15 @@ for epoch in range(opt.epoch_count,
                     #     break
                     curr_data = get_curr_data(data, opt.batch_size, 0)
                     output = model(curr_data['style'])
-                    val_loss += model.loss(output, curr_data['label'])
-                    # print(torch.max(output.data, 1)[1], data['label'])
+                    val_loss += model.loss(output, curr_data['label'].to(device))
+                    print(f"Test: {torch.max(output.data, 1)[1]}, {data['label']}")
                     correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
             accuracy = 100 * correct / te_dataset_size
             print("Test Accuracy = {}".format(accuracy))
-        if total_iters > 1000:
-            break
+            model.train()
+            """
+        #if total_iters > 1000:
+            #break
         # if total_iters % opt.display_freq == 0:  # display images on visdom and save images to a HTML file
         #     save_result = total_iters % opt.update_html_freq == 0
         #     model.compute_visuals()
@@ -98,18 +104,20 @@ for epoch in range(opt.epoch_count,
         if total_iters // opt.print_freq > c_print:  # print training losses and save logging information to the disk
             c_print += 1
             losses = OrderedDict()
-            losses['train'] = model.cur_loss
-            losses['val'] = val_loss
+            losses['train'] = float(model.cur_loss)
+            losses['val'] = float(0)
+            print(losses)
             t_comp = (time.time() - iter_start_time) / (opt.batch_size * opt.num_accumulations)
             visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
             if opt.display_id > 0:
                 visualizer.plot_current_losses(epoch, float(epoch_iter) / tr_dataset_size, losses)
-        '''
-        if total_iters % opt.save_latest_freq == 0:  # cache our latest model every <save_latest_freq> iterations
+
+        if total_iters // opt.save_latest_freq > c_save:  # cache our latest model every <save_latest_freq> iterations
+            c_save+=1
             print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
             save_suffix = 'iter_%d' % total_iters if opt.save_by_iter else 'latest'
-            model.save_networks(save_suffix)
-        '''
+            model.save_network(save_suffix)
+
         if device == 'cuda':
             for i in opt.gpu_ids:
                 with torch.cuda.device('cuda:%d' % (i)):
@@ -130,12 +138,25 @@ for epoch in range(opt.epoch_count,
     model.eval()
     with torch.no_grad():
         for i, data in enumerate(te_dataset):
+            if i >= 200:
+                break
+            curr_data = get_curr_data(data, opt.batch_size, 0)
+            output = model(curr_data['style'])
+            print(f"Test: {torch.max(output.data, 1)[1]}, {data['label']}")
+            correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
+    accuracy = 100 * correct / te_dataset_size
+    print("Test Accuracy = {}".format(accuracy))
+    correct = 0
+    with torch.no_grad():
+        for i, data in enumerate(tr_dataset):
+            if i >= 200:
+                break
             curr_data = get_curr_data(data, opt.batch_size, 0)
             output = model(curr_data['style'])
             print(torch.max(output.data, 1)[1], data['label'])
             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
-    accuracy = 100 * correct / te_dataset_size
-    print("Test Accuracy = {}".format(accuracy))
+    accuracy = 100 * correct / tr_dataset_size
+    print("Train Accuracy = {}".format(accuracy))
     # model.update_learning_rate()  # update learning rates at the end of every epoch.
     print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
-    # model.save_network(epoch)
+    model.save_network(epoch)
