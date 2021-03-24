@@ -98,7 +98,9 @@ class StyleDataset(BaseDataset):
                 buf.write(imgbuf)
                 buf.seek(0)
                 try:
-                    img = ToTensor()(Image.open(buf)).to(self.device)
+                    im = Image.open(buf)
+                    im = im.resize((im.size[0], 224//self.k))
+                    img = ToTensor()(im).to(self.device)
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]

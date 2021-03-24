@@ -330,7 +330,7 @@ def binary_to_dict(binary_dict):
 def concat_images(tf_arr):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 
-    max_y = max(tf_arr[i].shape[1] for i in range(len(tf_arr)))
+    max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
     max_y = 224
     # max_x = max_x + (max_x % 2)
     # max_y = max_y + (max_y % 2)
@@ -343,4 +343,7 @@ def concat_images(tf_arr):
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
     tf = torch.cat(pad_tf, 1)
+    tf = F.pad(input=tf,
+                    pad=[0, 0, 0, (224 - tf.shape[1])],
+                    mode='constant', value=256)
     return tf
