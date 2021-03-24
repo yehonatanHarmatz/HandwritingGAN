@@ -13,6 +13,8 @@ from util.visualizer import Visualizer
 from util.util import get_curr_data, tensor2im
 from models.StyleEncoder_model import StyleEncoder
 
+
+#חרמץ שלום
 opt = TrainOptions().parse()
 print(opt)
 torch.backends.cudnn.benchmark = True
