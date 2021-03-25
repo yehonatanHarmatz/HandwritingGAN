@@ -33,8 +33,8 @@ class StyleEncoder(nn.Module):
         super(StyleEncoder, self).__init__()
         self.name = 'S'
         self.device=device
-        self.cur_loss = torch.zeros(1)
-        self.val_loss = torch.zeros(1)
+        self.cur_loss = torch.zeros(1).to(self.device)
+        self.val_loss = torch.zeros(1).to(self.device)
         self.loss = nn.CrossEntropyLoss()
         self.n_labels=396
         if already_trained:
@@ -44,7 +44,7 @@ class StyleEncoder(nn.Module):
         # print(self.vgg)
         #self.vgg.parameters()
         #
-        self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),lr=0.005*0.1,weight_decay=0*0.05)
+        self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),lr=0.005*0.1,weight_decay=0.05*1)
         self.mixed=opt.autocast_bit
         self.scaler =opt.scaler
         #= opt.scaler =
@@ -53,14 +53,14 @@ class StyleEncoder(nn.Module):
 
 
     def forward(self, x, *input, save_loss=False, train=True):
-        y = self.vgg(x)
+        output = self.vgg(x)
         if save_loss:
-            loss = self.loss(x, self.data['label'])
+            loss = self.loss(output, self.data['label']).to(self.device)
             if train:
                 self.cur_loss += loss
             else:
                 self.val_loss += loss
-        return y
+        return output
 
     def backward(self, *input):
         if self.mixed:
@@ -73,7 +73,7 @@ class StyleEncoder(nn.Module):
             #hot_vector[i,label]=1
         with autocast() if self.mixed else contextlib.nullcontext():
             x = self.forward(self.data['style'])
-            loss = self.loss(x, self.data['label'])
+            loss = self.loss(x, self.data['label']).to(self.device)
             self.cur_loss += loss
         scale(loss).backward()
 
@@ -96,8 +96,8 @@ class StyleEncoder(nn.Module):
         torch.save(self.vgg.state_dict(), f"checkpoints/vgg{epoch}")
 
     def zero_loss(self):
-        self.cur_loss = torch.zeros(1)
-        self.val_loss = torch.zeros(1)
+        self.cur_loss = torch.zeros(1).to(self.device)
+        self.val_loss = torch.zeros(1).to(self.device)
     def prepare_vgg_extractor(self,index_freeze=40, path="",name="resnet"):
         # option to load our-trained vgg
         if path == "":
@@ -107,7 +107,7 @@ class StyleEncoder(nn.Module):
                 vgg19 = resnet18(pretrained=True)
             vgg19=vgg19.to(self.device)# ##.to("cpu")  # .eval()
             #print(vgg19.modules)
-            #freeze_network(vgg19, None)
+            freeze_network(vgg19, 4,name=name)
             replace_head(vgg19, self.n_labels,name=name)
         else:
             vgg19 = torch.load(path).to(self.device)
@@ -148,15 +148,26 @@ class StyleEncoder(nn.Module):
         return vgg19
 
 
-def freeze_network(net, index=None):
+def freeze_network(net, index=None,name="vgg"):
     if index is None:
         for param in net.parameters():
             param.requires_grad = False
     else:
-        # TODO- unsdertand with there are more params than layers
-        for layer in net.features[:index]:
-            for param in layer.parameters():
-                param.requires_grad = False
+        print("FREEZING NETWORK=============================")
+        if name=="vgg":
+            # TODO- unsdertand with there are more params than layers
+            for layer in net.features[:index]:
+                for param in layer.parameters():
+                    param.requires_grad = False
+        elif name=="resnet":
+            #               0, 1   2 ,  3       4       5       6       7       8   9
+            #strcutre is conv1,bn1,relu,maxpool,layer1,layer2,layer3,layer4,avgpool,fc
+            for layer in list(net.children())[:7]:
+                print(layer)
+                for param in layer.parameters():
+                    param.requires_grad = False
+        else:
+            raise Exception("no model name")
 
 
 def replace_head(model, num_writers,name="vgg"):

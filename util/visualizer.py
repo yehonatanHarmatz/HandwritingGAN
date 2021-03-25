@@ -265,3 +265,20 @@ class Visualizer():
                 win=self.display_id+999)
         except VisdomExceptionBase:
             self.create_visdom_connections()
+    def plot_accuracy(self, epoch, counter_ratio, accs):
+        if not hasattr(self, 'plot_acc'):
+            self.plot_acc = {'X': [], 'Y': [], 'legend': list(accs.keys())}
+        self.plot_acc['X'].append(epoch + counter_ratio)
+        self.plot_acc['Y'].append([accs[k] for k in self.plot_acc['legend']])
+        try:
+            self.vis.line(
+                X=np.stack([np.array(self.plot_acc['X'])] * len(self.plot_acc['legend']), 1),
+                Y=np.array(self.plot_acc['Y']),
+                opts={
+                    'title': self.name + ' Accuracy over time',
+                    'legend': self.plot_acc['legend'],
+                    'xlabel': 'epoch',
+                    'ylabel': 'Accuracy %'},
+                win=self.display_id+0x4141)
+        except VisdomExceptionBase:
+            self.create_visdom_connections()

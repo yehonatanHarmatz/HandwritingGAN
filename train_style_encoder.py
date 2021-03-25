@@ -41,7 +41,7 @@ c_save = 0
 c_display = 0
 for epoch in range(opt.epoch_count,
                    opt.niter + opt.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
-    model.zero_loss()
+
     model.train()
     epoch_start_time = time.time()  # timer for entire epoch
     iter_data_time = time.time()  # timer for data loading per iteration
@@ -148,6 +148,7 @@ for epoch in range(opt.epoch_count,
     correct = 0
     model.eval()
     counter_i = 0
+    model.zero_loss()
     with torch.no_grad():
         for i, data in enumerate(te_dataset):
             # if i >= 200:
@@ -159,6 +160,8 @@ for epoch in range(opt.epoch_count,
             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
     accuracy = 100 * correct / counter_i
     print("Test Accuracy = {}".format(accuracy))
+    accs = OrderedDict()
+    accs["Val Accuracy"] = accuracy
     correct = 0
     counter_i = 0
 
@@ -173,6 +176,9 @@ for epoch in range(opt.epoch_count,
             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
     accuracy = 100 * correct / counter_i
     print("Train Accuracy = {}".format(accuracy))
+    accs["Train Accuracy"] = accuracy
+    #plot the accuracies
+    visualizer.plot_accuracy(epoch,1,accs)
     # model.update_learning_rate()  # update learning rates at the end of every epoch.
     print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
     model.save_network(epoch)
