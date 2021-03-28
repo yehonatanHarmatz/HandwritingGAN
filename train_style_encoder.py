@@ -17,7 +17,7 @@ from models.StyleEncoder_model import StyleEncoder
 opt = TrainOptions().parse()
 print(opt)
 torch.backends.cudnn.benchmark = True
-device = "cuda"
+device = "cpu"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
@@ -35,6 +35,13 @@ total_iters = 0  # the total number of training iterations
 opt.iter = 0
 model = StyleEncoder(opt, device=device)
 visualizer = Visualizer(opt)
+'''
+for a in tr_dataset:
+    im = tensor2im(a['style'])
+    img = Image.fromarray(im, 'RGB')
+    # img.save('my.png')
+    img.show()
+'''
 t_data = 0
 c_print = 0
 c_save = 0
@@ -127,7 +134,7 @@ for epoch in range(opt.epoch_count,
             c_save += 1
             print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
             save_suffix = 'iter_%d' % total_iters if opt.save_by_iter else 'latest'
-            # model.save_network(save_suffix)
+            model.save_network(save_suffix)
 
         if device == 'cuda':
             for i in opt.gpu_ids:

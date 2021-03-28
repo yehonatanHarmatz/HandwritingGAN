@@ -32,11 +32,13 @@ class StyleEncoder(nn.Module):
     def __init__(self, opt,already_trained=False, path=None,device="cuda", **kwargs):
         super(StyleEncoder, self).__init__()
         self.name = 'S'
+        self.gpu_ids = opt.gpu_ids
         self.device=device
         self.cur_loss = torch.zeros(1).to(self.device)
         self.val_loss = torch.zeros(1).to(self.device)
         self.loss = nn.CrossEntropyLoss()
         self.n_labels=396
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         if already_trained:
             self.vgg = self.prepare_vgg_extractor(path=path)
         else:
@@ -93,7 +95,25 @@ class StyleEncoder(nn.Module):
         self.data['label'] = self.data['label'].to(self.device)
 
     def save_network(self, epoch):
-        torch.save(self.vgg.state_dict(), f"checkpoints/vgg{epoch}")
+        """Save all the networks to the disk.
+
+        Parameters:
+            epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
+        """
+        name = "Style_Encoder"
+        save_filename = '%s_net_%s.pth' % (epoch, name)
+        save_path = os.path.join(self.save_dir, save_filename)
+        net = self.vgg
+
+        if len(self.gpu_ids) > 0 and torch.cuda.is_available():
+            # torch.save(net.module.cpu().state_dict(), save_path)
+            if len(self.gpu_ids) > 1:
+                torch.save(net.module.cpu().state_dict(), save_path)
+            else:
+                torch.save(net.cpu().state_dict(), save_path)
+            net.cuda(self.gpu_ids[0])
+        else:
+            torch.save(net.cpu().state_dict(), save_path)
 
     def zero_loss(self):
         self.cur_loss = torch.zeros(1).to(self.device)
