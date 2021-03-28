@@ -163,7 +163,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
         os.makedirs(outputPath)
     else:
         os.makedirs(outputPath)
-    a = 0.5 if mode in ['val', 'test'] else 5
+    a = 0.5 if mode in ['val', 'test'] else 6.1
     env = lmdb.open(outputPath, map_size=int(a*1073741824))
     cache = {}
     nSamples = 0
@@ -251,14 +251,15 @@ def main():
     discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
     k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
-    if mode == 'tr':
-        create_balance_data(writers_images,multiply=10)
-    elif mode=='val':
-        create_balance_data(writers_images,multiply=10)
+
     # writers_tr = list(map(int, list(writers_images.keys())))
     # writers_tr.sort()
-    # map_index = {writers_tr[i]:i for i in range(len(writers_tr))}
+    # map_index = {writers_tr[i]: i for i in range(len(writers_tr))}
     # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)], int(wr)) for wr in writers_images], reverse=True))
+
+    if mode == 'tr':
+        create_balance_data(writers_images,multiply=1)
+
     '''
     mode = 'val'
     writers_images_te, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)

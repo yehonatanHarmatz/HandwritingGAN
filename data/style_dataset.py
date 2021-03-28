@@ -66,7 +66,7 @@ class StyleDataset(BaseDataset):
                 self.nSamples = self.nSamples + nSamples
                 self.nAugSamples = nSamples
 
-        self.transform = get_transform(opt, grayscale=(opt.input_nc == 1))
+        self.transform = get_transform(opt)
         self.target_transform = target_transform
         # if opt.collate:
         #     self.collate_fn = TextCollator(opt)
@@ -100,17 +100,18 @@ class StyleDataset(BaseDataset):
                 try:
                     im = Image.open(buf)
                     im = im.resize((im.size[0], 224//self.k))
-                    img = ToTensor()(im).to(self.device)
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
-                if self.transform is not None and False: #TODO
-                    img = self.transform(img)
+                if self.transform is not None:
+                    img = self.transform(im).to(self.device)
+                else:
+                    img = ToTensor()(im).to(self.device)
                 imgs.append(img)
             # print([image for image in imgs])
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
             # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
-            imgs_tensor = concat_images(imgs)
+            imgs_tensor = concat_images(imgs, normalized=("Normalize" in str(self.transform.transforms)))
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
             # img.resize((img.size[0], 224))

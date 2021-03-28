@@ -327,7 +327,7 @@ def binary_to_dict(binary_dict):
     d = json.loads(jsn)
     return d
 # written by Yehonatan Harmatz
-def concat_images(tf_arr):
+def concat_images(tf_arr, normalized=False):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 
     max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
@@ -337,13 +337,14 @@ def concat_images(tf_arr):
     # pad_tf = [F.pad(input=tf,
     #                 pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
     #                 mode='constant', value=0) for tf in tf_arr]
+    pad_val = 1 if normalized else 256
     pad_tf = [F.pad(input=tf,
                     pad=[0, (max_y - tf.shape[2])],
-                    mode='constant', value=256) for tf in tf_arr]
+                    mode='constant', value=pad_val) for tf in tf_arr]
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
     tf = torch.cat(pad_tf, 1)
     tf = F.pad(input=tf,
                     pad=[0, 0, 0, (224 - tf.shape[1])],
-                    mode='constant', value=256)
+                    mode='constant', value=pad_val)
     return tf
