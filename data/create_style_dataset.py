@@ -163,7 +163,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
         os.makedirs(outputPath)
     else:
         os.makedirs(outputPath)
-    a = 0.5 if mode in ['val', 'test'] else 6.1
+    a = 0.5 if mode in ['val', 'test'] else 3
     env = lmdb.open(outputPath, map_size=int(a*1073741824))
     cache = {}
     nSamples = 0
@@ -229,7 +229,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'val'  # tr/te/val/va1/va2/all
+    mode = 'tr'  # tr/te/val/va1/va2/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:
