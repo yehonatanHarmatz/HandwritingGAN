@@ -57,11 +57,3 @@ def show_features(model, dataloader_tr, dataloader_te):
     plot_data(test_tsne, test_labels)
 
 
-colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'lime', 'gray', 'bisque', 'darkorchid', 'violet', 'slateblue', 'tan',
-              'aquamarine', 'greenyellow', 'chocolate']
-    # colors = plt.cm.cmaps_listed
-marks = ['.', ',', 'o', 'v', '^', '<', '>', '1', '2', '3', '4', '8', 's', 'p', 'P', '*', 'h', 'H',
-         '+', 'x', 'X', 'D', 'd', '|', '_', '$m$', '$n$', '$a$', '$f$', '$&$']
-plist = [(c, m) for c in colors for m in marks]
-random.shuffle(plist)
-pdict = {i:v for i, v in enumerate(plist)}

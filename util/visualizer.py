@@ -108,7 +108,7 @@ class Visualizer():
         print('\n\nCould not connect to Visdom server. \n Trying to start a server....')
         print('Command: %s' % cmd)
         Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-
+    #TODO- add the k iamges to display
     def display_current_results(self, visuals,labels, epoch, save_result):
         """Display current results on visdom; save current results to an HTML file.
 

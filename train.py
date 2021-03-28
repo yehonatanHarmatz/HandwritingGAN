@@ -61,7 +61,7 @@ if __name__ == '__main__':
             visualizer.reset()
             total_iters += opt.batch_size*opt.num_accumulations
             epoch_iter += opt.batch_size*opt.num_accumulations
-
+            # default = 4
             if opt.num_critic_train == 1:
                 counter = 0
                 for accumulation_index in range(opt.num_accumulations):
@@ -72,10 +72,13 @@ if __name__ == '__main__':
                     counter += 1
                 model.optimize_G_step()
                 model.optimize_D_OCR_step()
+            # defulat=4 so else
             else:
                 if (i % opt.num_critic_train) == 0:
                     counter = 0
+                    # defult=1
                     for accumulation_index in range(opt.num_accumulations):
+                        #TODO- add the data from style
                         curr_data = get_curr_data(data, opt.batch_size, counter)
                         model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
                         model.optimize_G()

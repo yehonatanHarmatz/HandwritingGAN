@@ -103,15 +103,15 @@ class StyleDataset(BaseDataset):
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
-                if self.transform is not None:
-                    img = self.transform(im).to(self.device)
-                else:
-                    img = ToTensor()(im).to(self.device)
+                img = ToTensor()(im).to(self.device)
                 imgs.append(img)
             # print([image for image in imgs])
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
             # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
-            imgs_tensor = concat_images(imgs, normalized=("Normalize" in str(self.transform.transforms)))
+            imgs_tensor = concat_images(imgs)
+            if self.transform is not None:
+                img_pil=torchvision.transforms.ToPILImage()(imgs_tensor)
+                imgs_tensor = self.transform(img_pil).to(self.device)
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
             # img.resize((img.size[0], 224))

@@ -17,7 +17,7 @@ from models.StyleEncoder_model import StyleEncoder
 opt = TrainOptions().parse()
 print(opt)
 torch.backends.cudnn.benchmark = True
-device = "cpu"
+device = "cuda"
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)

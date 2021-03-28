@@ -69,8 +69,10 @@ class BaseOptions():
         parser.add_argument('--crop_size', type=int, default=32, help='then crop to this size')
         parser.add_argument('--display_winsize', type=int, default=256,
                             help='display window size for both visdom and HTML')
-        parser.add_argument('--flip', action='store_true',
-                            help='if specified, do not flip the images for data augmentation')
+        parser.add_argument('--flip', default=False, action='store_true',
+                            help='if specified,flip the images for data augmentation')
+        parser.add_argument('--gaussian', default=False,action='store_true',
+                            help='if specified, do gaussian the images for data augmentation')
         parser.add_argument('--serial_batches', action='store_true',
                             help='if true, takes images in order to make batches, otherwise takes them randomly')
         parser.add_argument('--num_threads', default=0, type=int, help='# threads for loading data')
@@ -215,7 +217,6 @@ class BaseOptions():
             '--skip_init', action='store_true', default=False,
             help='Skip initialization, ideal for testing when ortho init was used '
                  '(default: %(default)s)')
-
 
         ### Batch size, parallel, and precision stuff ###
         parser.add_argument(
