@@ -24,6 +24,7 @@ print(tr_dataset_size)
 opt.dataname += "_val"
 opt.dataroot = dataset_catalog.datasets[opt.dataname]
 opt.scaler = GradScaler()
+#opt.test=True
 te_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 te_dataset_size = len(te_dataset)
 if opt.batch_size_test == 0:
@@ -163,7 +164,7 @@ for epoch in range(opt.epoch_count,
             counter_i += opt.batch_size_test
             curr_data = get_curr_data(data, opt.batch_size_test, 0)
             output = model(curr_data['style'], save_loss=True, train=False)
-            print(f"Test: {torch.max(output.data, 1)[1]}, {data['label']}")
+            print(f"Test {i}/{te_dataset_size // opt.batch_size}: {torch.max(output.data, 1)[1]}, {data['label']}")
             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
     accuracy = 100 * correct / counter_i
     print("Test Accuracy = {}".format(accuracy))

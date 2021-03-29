@@ -80,35 +80,37 @@ def get_params(opt, size):
 
 def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, convert=True):
     transform_list = []
-    if grayscale:
-        transform_list.append(transforms.Grayscale(1))
-    if 'resize' in opt.preprocess:
-        osize = [opt.load_size, opt.load_size]
-        transform_list.append(transforms.Resize(osize, method))
-    elif 'scale_width' in opt.preprocess:
-        transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size, method)))
+    if opt.test:
+        if grayscale:
+            transform_list.append(transforms.Grayscale(1))
+        if 'resize' in opt.preprocess:
+            osize = [opt.load_size, opt.load_size]
+            transform_list.append(transforms.Resize(osize, method))
+        elif 'scale_width' in opt.preprocess:
+            transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size, method)))
 
-    if 'crop' in opt.preprocess:
-        if params is None:
-            transform_list.append(transforms.RandomCrop(opt.crop_size))
-        else:
-            transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.crop_size)))
+        if 'crop' in opt.preprocess:
+            if params is None:
+                transform_list.append(transforms.RandomCrop(opt.crop_size))
+            else:
+                transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.crop_size)))
 
-    if opt.preprocess == 'none':
-        transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base=4, method=method)))
+        if opt.preprocess == 'none':
+            transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base=4, method=method)))
 
-    # if opt.preprocess == 'no_preprocess':
-    #     return None
+        # if opt.preprocess == 'no_preprocess':
+        #     return None
 
-    if opt.flip:
-        if params is None:
-            transform_list.append(transforms.RandomHorizontalFlip())
-        elif params['flip']:
-            transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
+        if opt.flip:
+            if params is None:
+                transform_list.append(transforms.RandomHorizontalFlip())
+            elif params['flip']:
+                transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
 
-    if opt.gaussian:
-        transform_list += [transforms.GaussianBlur(kernel_size=11)]
-
+        #if opt.gaussian:
+            #transform_list += [transforms.GaussianBlur(kernel_size=11)]
+        if opt.crop_pre:
+            transform_list +=[transforms.RandomResizedCrop(224, scale=(0.7, 1.0))]
     if convert:
         transform_list += [transforms.ToTensor()]
         if grayscale:

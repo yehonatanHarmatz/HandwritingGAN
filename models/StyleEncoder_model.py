@@ -12,7 +12,10 @@ import os
 
 class StyleEncoder(nn.Module):
 
-    def load_checkpoint(filepath):
+    def load_state_dict(self, state_dict,
+                        strict= True):
+        self.vgg.load_state_dict(state_dict)
+    def load_checkpoint(self,filepath):
         checkpoint = torch.load(filepath)
         model = checkpoint['model']
         model.load_state_dict(checkpoint['state_dict'])
@@ -37,7 +40,7 @@ class StyleEncoder(nn.Module):
         self.cur_loss = torch.zeros(1).to(self.device)
         self.val_loss = torch.zeros(1).to(self.device)
         self.loss = nn.CrossEntropyLoss()
-        self.n_labels=396
+        self.n_labels=140#396
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         if already_trained:
             self.vgg = self.prepare_vgg_extractor(path=path)

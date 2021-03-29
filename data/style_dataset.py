@@ -112,6 +112,7 @@ class StyleDataset(BaseDataset):
             if self.transform is not None:
                 img_pil=torchvision.transforms.ToPILImage()(imgs_tensor)
                 imgs_tensor = self.transform(img_pil).to(self.device)
+                #print(self.transform)
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
             # img.resize((img.size[0], 224))
