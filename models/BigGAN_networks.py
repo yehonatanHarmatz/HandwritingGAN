@@ -143,7 +143,7 @@ class Generator(nn.Module):
                  BN_eps=1e-5, SN_eps=1e-12, G_fp16=False,
                  G_init='ortho', skip_init=False,
                  G_param='SN', norm_style='bn',gpu_ids=[], bn_linear='embed', input_nc=3,
-                 one_hot=False, first_layer=False, one_hot_k=1,
+                 one_hot=False, first_layer=False, one_hot_k=1,len_style_features=512,
                  **kwargs):
         super(Generator, self).__init__()
         self.name = 'G'
@@ -201,6 +201,7 @@ class Generator(nn.Module):
         self.arch = G_arch(self.ch, self.attention)[resolution]
         self.bn_linear = bn_linear
 
+        self.len_style_features=len_style_features
         # If using hierarchical latents, adjust z
         #default- true
         if self.hier:
@@ -246,9 +247,9 @@ class Generator(nn.Module):
         elif self.hier:
             if self.first_layer:
                 #we insert z also as noise with s
-                input_size = self.z_chunk_size +4096+ self.z_chunk_size
+                input_size = self.z_chunk_size +self.len_style_features+ self.z_chunk_size
             else:
-                input_size = self.n_classes + self.z_chunk_size +4096
+                input_size = self.n_classes + self.z_chunk_size +self.len_style_features
             self.which_bn = functools.partial(layers.ccbn,
                                               which_linear=bn_linear,
                                               cross_replica=self.cross_replica,

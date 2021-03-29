@@ -32,6 +32,7 @@ class ScrabbleGANBaseModel(BaseModel):
 
     def __init__(self, opt):
         BaseModel.__init__(self, opt)  # call the initialization method of BaseModel
+
         opt.G_activation = activation_dict[opt.G_nl]
         opt.D_activation = activation_dict[opt.D_nl]
         # load saved model to finetune:
@@ -51,10 +52,12 @@ class ScrabbleGANBaseModel(BaseModel):
         self.loss_grad_fake_adv =torch.zeros(1)
 
         self.loss_Dw=torch.zeros(1)
+
+        self.num_writers = 140
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks to save and load networks.
         # you can use opt.isTrain to specify different behaviors for training and test. For example, some networks will not be used during test, and you don't need to load them.
         #TODO- add 'S' to models
-        self.model_names = ['G', 'D', 'OCR']
+        self.model_names = ['G', 'D', 'OCR','Dw']
         # define networks; you can use opt.isTrain to specify different behaviors for training and test.
         # Next, build the model
         opt.n_classes = len(opt.alphabet)
@@ -66,10 +69,14 @@ class ScrabbleGANBaseModel(BaseModel):
         self.netOCR = CRNN(opt).to(self.device)
         # TODO- add dw to self
         #self.netDw=DiscriminatorWriter(self.num_writers).to(self.device)
-        self.Dwcriterion=torch.nn.CrossEntropyLoss()
+        #self.Dwcriterion=torch.nn.CrossEntropyLoss()
 
         # TODO- add S to self
-        #self.style_encoder = StyleEncoder(self.opt)
+        path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\\checkpoints\\_style15IAMcharH32rmPunct_GANres16_bs128\\9_net_Style_Encoder.pth"
+        self.style_encoder = StyleEncoder(self.opt,already_trained=True,path=path_s)
+        # won't be trained anymore
+        self.style_encoder.eval()
+        self.len_style_features=512
         if len(opt.gpu_ids) > 0:
             assert (torch.cuda.is_available())
             self.netOCR.to(opt.gpu_ids[0])
@@ -160,7 +167,7 @@ class ScrabbleGANBaseModel(BaseModel):
     #TODO- add S to input G and D
     def visualize_fixed_noise(self):
         #what should we do in that?
-        fixed_style=torch.zeros(len(self.label_fix),4096).to(self.device)
+        fixed_style=torch.zeros(len(self.label_fix),self.len_style_features).to(self.device)
         if self.opt.single_writer:
             self.fixed_noise = self.z[0].repeat((self.fixed_noise_size, 1))
         if self.opt.one_hot:
@@ -269,7 +276,8 @@ class ScrabbleGANBaseModel(BaseModel):
         self.img_path = input['img_path']  # get image paths
         self.idx_real = input['idx']  # get image paths
         #TODO- added s calced with batch size in mind
-        self.input_features=torch.zeros((self.opt.batch_size,4096)).to(self.device)#self.style_encoder(style_img)
+        #self.input_features=torch.zeros((self.opt.batch_size,self.len_style_features)).to(self.device)#self.style_encoder(style_img)
+        self.input_features
     def load_networks(self, epoch):
         BaseModel.load_networks(self, epoch)
         if self.opt.single_writer:

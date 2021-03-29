@@ -99,6 +99,9 @@ class BaseOptions():
             help='Train with autocasting to fp16 or fp32 where needed?'
                  '(default: %(default)s)')
 
+        parser.add_argument('--len_style_features', type=int, default=512, help='len of the features endocer')
+
+
         ### Model stuff ###
         parser.add_argument(
             '--model', type=str, default='ScrabbleGAN',

@@ -32,7 +32,7 @@ class StyleEncoder(nn.Module):
                 params_to_update.append(param)
         return params_to_update
 
-    def __init__(self, opt,already_trained=False, path=None,device="cuda", **kwargs):
+    def __init__(self, opt,already_trained=False, path=None,device="cuda", features_only=False,**kwargs):
         super(StyleEncoder, self).__init__()
         self.name = 'S'
         self.gpu_ids = opt.gpu_ids
@@ -42,16 +42,20 @@ class StyleEncoder(nn.Module):
         self.loss = nn.CrossEntropyLoss()
         self.n_labels=140#396
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        self.vgg=None
+        self.features_only = features_only
         if already_trained:
-            self.vgg = self.prepare_vgg_extractor(path=path)
+            self.prepare_vgg_extractor(path=path)
         else:
-            self.vgg = self.prepare_vgg_extractor(index_freeze=0)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
+            self.prepare_vgg_extractor(index_freeze=0)  # torch.load('..\\models_pth\\vgg19_bn_features.pth')
         # print(self.vgg)
         #self.vgg.parameters()
         #
-        self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),lr=0.005*0.1,weight_decay=0.05*1)
+        if not already_trained:
+            self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),lr=0.005*0.1,weight_decay=0.05*1)
         self.mixed=opt.autocast_bit
         self.scaler =opt.scaler
+
         #= opt.scaler =
         #torch.optim.Adam(model.parameters(),
                                           #lr=0.001)
@@ -122,27 +126,31 @@ class StyleEncoder(nn.Module):
         self.cur_loss = torch.zeros(1).to(self.device)
         self.val_loss = torch.zeros(1).to(self.device)
     def prepare_vgg_extractor(self,index_freeze=40, path="",name="resnet"):
-        # option to load our-trained vgg
+        # option to load our-trained model
+
+        if name=="vgg":
+            vgg19 =vgg19_bn(pretrained=True)
+        elif name=="resnet":
+            vgg19 = resnet18(pretrained=True)
+        vgg19=vgg19.to(self.device)# ##.to("cpu")  # .eval()
+        #print(vgg19.modules)
+        self.vgg = vgg19
         if path == "":
-            if name=="vgg":
-                vgg19 =vgg19_bn(pretrained=True)
-            elif name=="resnet":
-                vgg19 = resnet18(pretrained=True)
-            vgg19=vgg19.to(self.device)# ##.to("cpu")  # .eval()
-            #print(vgg19.modules)
-            freeze_network(vgg19, 4,name=name)
-            replace_head(vgg19, self.n_labels,name=name)
+            freeze_network(self.vgg, 4,name=name)
+            replace_head(self.vgg, self.n_labels, name=name)
         else:
-            vgg19 = torch.load(path).to(self.device)
-            freeze_network(vgg19)
-        """model.half()  # convert to half precision
-        for layer in model.modules():
-            if isinstance(layer, nn.BatchNorm2d):
-                layer.float()
-        """
-        vgg19 = vgg19.to(self.device)
+            replace_head(self.vgg, self.n_labels, name=name)
+            loaded_state = torch.load(path)
+            self.load_state_dict(loaded_state)
+            #vgg19 = torch.load(path).to(self.device)
+            freeze_network(self.vgg)
+        #self.vgg = vgg19
+        self.vgg = self.vgg.to(self.device)
         # print(dir(vgg19))
-        print(vgg19.modules)
+        if self.features_only:
+            self.vgg = torch.nn.Sequential(*(list(self.vgg.children())[:9]))
+        print(self.vgg.modules)
+        return self.vgg
         # modules=list(resnet152.children())[:-1]
         # resnet152=nn.Sequential(*modules)
         #vgg19_fearures = torch.nn.Sequential(*(list(vgg19.children())[0][:-1]))
@@ -156,7 +164,7 @@ class StyleEncoder(nn.Module):
         # print("paarmas,", list(vgg19.parameters()))
         # print([(i, 1) for i, f in enumerate(vgg19.parameters()) if f.requires_grad])
         # print(sum([1 for f in vgg19.classifier if f.requires_grad]))
-        child_counter = 0
+        # child_counter = 0
         """for child in vgg19.children():
             print(" child", child_counter, "is:")
             print(child)
@@ -168,8 +176,11 @@ class StyleEncoder(nn.Module):
         # print(list(vgg19.features[38].parameters()))
         # print("*"*60)
         # print(list(vgg19.features[40].parameters()))
-        return vgg19
 
+    def eval(self):
+        self.vgg.eval()
+    def train(self, mode: bool = True):
+        self.vgg.train()
 
 def freeze_network(net, index=None,name="vgg"):
     if index is None:
