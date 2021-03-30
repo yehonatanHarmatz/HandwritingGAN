@@ -254,6 +254,7 @@ def main():
 
     # writers_tr = list(map(int, list(writers_images.keys())))
     # writers_tr.sort()
+    # print(len(writers_tr))
     # map_index = {writers_tr[i]: i for i in range(len(writers_tr))}
     # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)], int(wr)) for wr in writers_images], reverse=True))
 

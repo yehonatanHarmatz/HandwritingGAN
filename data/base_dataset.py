@@ -80,7 +80,7 @@ def get_params(opt, size):
 
 def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, convert=True):
     transform_list = []
-    if opt.test:
+    if not opt.test:
         if grayscale:
             transform_list.append(transforms.Grayscale(1))
         if 'resize' in opt.preprocess:
@@ -111,6 +111,10 @@ def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, conve
             #transform_list += [transforms.GaussianBlur(kernel_size=11)]
         if opt.crop_pre:
             transform_list +=[transforms.RandomResizedCrop(224, scale=(0.7, 1.0))]
+
+        if opt.affine:
+            transform_list +=[transforms.RandomAffine(degrees=0, shear=10, fillcolor=256)]
+
     if convert:
         transform_list += [transforms.ToTensor()]
         if grayscale:

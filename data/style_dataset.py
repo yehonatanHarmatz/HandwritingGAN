@@ -108,7 +108,7 @@ class StyleDataset(BaseDataset):
             # print([image for image in imgs])
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
             # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
-            imgs_tensor = concat_images(imgs)
+            imgs_tensor = concat_images(imgs, normalized=('Normalize' in str(self.transform)))
             if self.transform is not None:
                 img_pil=torchvision.transforms.ToPILImage()(imgs_tensor)
                 imgs_tensor = self.transform(img_pil).to(self.device)

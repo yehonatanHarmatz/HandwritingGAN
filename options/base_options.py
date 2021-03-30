@@ -73,6 +73,8 @@ class BaseOptions():
                             help='if specified,flip the images for data augmentation')
         parser.add_argument('--gaussian', default=False,action='store_true',
                             help='if specified, do gaussian the images for data augmentation')
+        parser.add_argument('--affine', default=False, action='store_true',
+                            help='if specified, do random affine the images for data augmentation')
         parser.add_argument('--crop_pre', default=False, action='store_true',
                             help='if specified, do crop the images for data augmentation')
         parser.add_argument('--test', default=False, action='store_true',

@@ -282,3 +282,10 @@ class Visualizer():
                 win=self.display_id+0x4141)
         except VisdomExceptionBase:
             self.create_visdom_connections()
+    # TODO call with style
+    def plot_current_style(self, style_tensor, label):
+        image_numpy = util.tensor2im(style_tensor)
+        try:
+            self.vis.image(image_numpy.transpose([2, 0, 1]), opts=dict(title=label), win='style_window')
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
