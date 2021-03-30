@@ -170,6 +170,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
     cnt = 1
     print('Number of writers in train: ' + str(len(writer_to_images_dict)))
     writers = list(map(int, list(writer_to_images_dict.keys())))
+    cache['writers_mapping_id'] = str(writers)
     writers.sort()
     map_index = {writers[i]:i for i in range(len(writers))}
     for writer in tqdm(writer_to_images_dict):

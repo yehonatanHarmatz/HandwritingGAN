@@ -51,6 +51,7 @@ class StyleDataset(BaseDataset):
         with self.env.begin(write=False) as txn:
             nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
             self.nSamples = nSamples
+            self.maping_id = {i:k for i,k in enumerate(ast.literal_eval(txn.get('writers_mapping_id'.encode('utf-8')).decode('utf-8')))}
 
         if opt.aug and opt.aug_dataroot is not None:
             self.env_aug = lmdb.open(
