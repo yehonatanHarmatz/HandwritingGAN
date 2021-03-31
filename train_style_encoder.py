@@ -42,6 +42,15 @@ def main():
     visualizer = Visualizer(opt_tr)
     best_val_acc = 0
     best_val_loss = float('inf')
+
+    # TODO PUT this code where needed
+    '''
+    Look here Sherman 
+    from data.style_dataset import StyleDataset
+    style_dataset = StyleDataset(opt_tr)
+    style_zero = style_dataset[0]
+    style_zero_features = model(style_zero['style'].unsqueeze(0))
+    '''
     '''
     for a in tr_dataset:
         im = tensor2im(a['style'])
