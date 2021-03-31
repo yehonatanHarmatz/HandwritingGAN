@@ -14,6 +14,7 @@ from util.util import get_curr_data, tensor2im
 from models.StyleEncoder_model import StyleEncoder
 
 def main():
+    torch.set_num_threads(1)
     opt_tr = TrainOptions().parse()
     print(opt_tr)
     torch.backends.cudnn.benchmark = True

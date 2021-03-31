@@ -26,6 +26,7 @@ import torch
 import os
 
 if __name__ == '__main__':
+    torch.set_num_threads(1)
     opt = TrainOptions().parse()   # get training options
     # Seed RNG
     seed_rng(opt.seed)

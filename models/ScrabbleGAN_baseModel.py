@@ -70,7 +70,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.netconverter = strLabelConverter(opt.alphabet)
         self.netOCR = CRNN(opt).to(self.device)
         # TODO- add dw to self
-        self.netDw=DiscriminatorWriter(self.num_writers).to(self.device)
+        self.netDw=DiscriminatorWriter(self.opt,self.num_writers).to(self.device)
         self.Dwcriterion=torch.nn.CrossEntropyLoss()
 
         # TODO- add S to self
@@ -104,7 +104,7 @@ class ScrabbleGANBaseModel(BaseModel):
                                                 lr=opt.OCR_lr, betas=(opt.OCR_B1, opt.OCR_B2), weight_decay=0,
                                                 eps=opt.adam_eps)
             self.optimizer_Dw=torch.optim.Adam(self.netDw.parameters(),
-                                                lr=opt.OCR_lr, betas=(opt.OCR_B1, opt.OCR_B2), weight_decay=0,
+                                                lr=opt.D_lr, betas=(opt.D_B1, opt.D_B2), weight_decay=0,
                                                 eps=opt.adam_eps)
             #TODO- check if need to add
             self.optimizers = [self.optimizer_G, self.optimizer_OCR,self.optimizer_Dw]
@@ -169,6 +169,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.real_z_mean = None
     #TODO- add S to input G and D
     def visualize_fixed_noise(self):
+        #TODO- get random style
         #what should we do in that?
         fixed_style=torch.zeros(len(self.label_fix),self.len_style_features).to(self.device)
         if self.opt.single_writer:
@@ -207,9 +208,11 @@ class ScrabbleGANBaseModel(BaseModel):
             setattr(self, 'grad_OCR_fixed_' + 'label_' + label, grad_OCR)
             setattr(self, 'grad_G_fixed_' + 'label_' + label, grad_adv)
             setattr(self, 'fake_fixed_' + 'label_' + label, image)
-        print('######## current fake images OCR prediction ########')
+
+        #TODO- calc grad of DW and print it
         #TODO- do on the fake images durning training
         #self.fake
+        print('######## current fake images OCR prediction ########')
         with torch.no_grad():
             self.netOCR.eval()
             pred_fake_cur_OCR = self.netOCR(self.fake)
@@ -226,6 +229,12 @@ class ScrabbleGANBaseModel(BaseModel):
             for i in range(self.opt.batch_size):
                 print('%-20s => %-20s, gt: %-20s' % (raw_preds[i], sim_preds[i], self.words[i]))
         self.netOCR.train()
+        self.netDw.eval()
+        #TODO get labels of fake and real?
+
+        #loss_Dw_fake=print(torch.argmax(self.netDw(self.fake)),self.cur_writer_label))
+        self.netDw.train()
+
 
     def get_current_visuals(self):
 
@@ -281,7 +290,7 @@ class ScrabbleGANBaseModel(BaseModel):
         #TODO- added s calced with batch size in mind
         #self.input_features=torch.zeros((self.opt.batch_size,self.len_style_features)).to(self.device)#self.style_encoder(style_img)
         self.cur_style_image = style_img['style']#.to(self.device)
-        self.cur_writer_label= style_img['label']#.to(self.device)
+        self.cur_writer_label= style_img['label'].to(self.device)
         #self.style_encoder.set_input()
         with torch.no_grad():
             self.input_features =torch.squeeze(self.style_encoder(style_img['style']))
@@ -298,8 +307,9 @@ class ScrabbleGANBaseModel(BaseModel):
     def forward(self, words=None, z=None,s=None):
         """Run forward pass. This will be called by both functions <optimize_parameters> and <test>."""
         if hasattr(self, 'fake'): del self.fake, self.text_encode_fake, self.len_text_fake, self.one_hot_fake
-
+        #takes from lexicon a random word
         self.label_fake.sample_()
+        #TODO- generate a random style features  and label as well
         if words is None:
             # TODO words not from the style given
             words = [self.lex[int(i)] for i in self.label_fake]
@@ -360,6 +370,8 @@ class ScrabbleGANBaseModel(BaseModel):
         self.loss_OCR_real = torch.mean(loss_OCR_real[~torch.isnan(loss_OCR_real)])
         # TODO- add loss Dw
         preds=self.netDw(self.real.detach())
+        #,self.cur_writer_label
+        #TODO TODO TODO IMPORTANT - replace with actual label of real!!!
         self.loss_Dw_real = self.Dwcriterion(preds,self.cur_writer_label)
         # total loss
 
@@ -424,8 +436,8 @@ class ScrabbleGANBaseModel(BaseModel):
         loss_OCR_fake = self.OCR_criterion(pred_fake_OCR, self.text_encode_fake.detach(), preds_size, self.len_text_fake.detach())
         self.loss_OCR_fake = torch.mean(loss_OCR_fake[~torch.isnan(loss_OCR_fake)])
         #TODO - add Dw
-
-        self.loss_Dw_fake= self.netDw(self.fake)
+        preds_dw=self.netDw(self.fake)
+        self.loss_Dw_fake= self.Dwcriterion (preds_dw,self.cur_writer_label)
         # total loss
         self.loss_T = self.loss_G + self.opt.gb_alpha*self.loss_OCR_fake+self.loss_Dw_fake
         grad_fake_OCR = torch.autograd.grad(self.loss_OCR_fake, self.fake, retain_graph=True)[0]
@@ -602,3 +614,9 @@ class ScrabbleGANBaseModel(BaseModel):
     def get_current_style(self):
         print(self.cur_style_image.shape,self.cur_writer_label.shape)
         return self.cur_style_image[0, :, :,:].unsqueeze(0),str(int(self.cur_writer_label[0]))
+
+    def get_fixed_style(self):
+        from data.style_dataset import StyleDataset
+        style_dataset = StyleDataset(opt_tr)
+        style_zero = style_dataset[0]
+        style_zero_features = model(style_zero['style'].unsqueeze(0))
