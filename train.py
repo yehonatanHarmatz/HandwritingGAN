@@ -17,7 +17,7 @@ See options/base_options.py and options/train_options.py for more training optio
 """
 import time
 from options.train_options import TrainOptions
-from data import create_dataset
+from data import create_dataset, dataset_catalog
 from models import create_model
 from util.visualizer import Visualizer
 from util.util import seed_rng
@@ -33,7 +33,24 @@ if __name__ == '__main__':
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     dataset_size = len(dataset)    # get the number of images in the dataset.
     print('The number of training images = %d' % dataset_size)
-
+    #prev_name=opt.dataname
+    #prev_mode=opt.dataset_mode
+    #change the name of dataset
+    opt_style= TrainOptions().parse()
+    opt_style.dataname='style15IAMcharH32rmPunct'
+    opt_style.dataroot = dataset_catalog.datasets[opt_style.dataname]
+    opt_style.dataset_mode ="style"
+    #opt_style.batch_size=opt_style.style_batch_size
+    print(opt_style.batch_size)
+    tr_dataset_style = create_dataset(opt_style)  # create a dataset given opt.dataset_mode and other options
+    tr_dataset_size = len(tr_dataset_style)
+    print('The number of  Style training images = %d' % tr_dataset_size)
+    #opt.dataname=prev_name
+    #opt.dataset_mode=prev_mode
+    #TODO- handle 16bit in GAN and Dw
+    # OUR VARIABLE
+    #if opt.autocast_bit:
+        #opt.scaler = GradScaler()
     model = create_model(opt)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers
     if opt.single_writer:
@@ -43,6 +60,7 @@ if __name__ == '__main__':
         model.netD.init_weights()
     visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
     total_iters = 0                # the total number of training iterations
+    total_iters_style = 0  # the total number of training iterations
     opt.iter = 0
     counter_print = 0
     counter_save = 0
@@ -52,8 +70,21 @@ if __name__ == '__main__':
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()    # timer for data loading per iteration
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
+        epoch_iter_style = 0
 
-        for i, data in enumerate(dataset):  # inner loop within one epoch
+        # enumerate the 2 datasets toegther
+        style_iterator = iter(tr_dataset_style)
+
+        for i, data in enumerate(dataset):
+
+            try:
+                data_style = next(style_iterator)
+            except StopIteration:
+                style_iterator = iter(tr_dataset_style)
+                data_style = next(style_iterator)
+
+        #do_cool_things()
+        #for i, data in enumerate(dataset):  # inner loop within one epoch
             opt.iter = i
             iter_start_time = time.time()  # timer for computation per iteration
             if total_iters % opt.print_freq == 0:
@@ -61,12 +92,15 @@ if __name__ == '__main__':
             visualizer.reset()
             total_iters += opt.batch_size*opt.num_accumulations
             epoch_iter += opt.batch_size*opt.num_accumulations
+            total_iters_style += opt_style.batch_size * opt.num_accumulations
+            epoch_iter_style += opt_style.batch_size * opt.num_accumulations
             # default = 4
             if opt.num_critic_train == 1:
                 counter = 0
                 for accumulation_index in range(opt.num_accumulations):
                     curr_data = get_curr_data(data, opt.batch_size, counter)
-                    model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
+                    curr_data_style = get_curr_data(data_style, opt_style.batch_size, 0)
+                    model.set_input(curr_data,style_img=curr_data_style)  # unpack data from dataset and apply preprocessing
                     model.optimize_G()
                     model.optimize_D_OCR()
                     counter += 1
@@ -80,14 +114,18 @@ if __name__ == '__main__':
                     for accumulation_index in range(opt.num_accumulations):
                         #TODO- add the data from style
                         curr_data = get_curr_data(data, opt.batch_size, counter)
-                        model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
+                        curr_data_style = get_curr_data(data_style, opt_style.batch_size, 0)
+                        model.set_input(curr_data,style_img=curr_data_style)   # unpack data from dataset and apply preprocessing
                         model.optimize_G()
                         counter += 1
                     model.optimize_G_step()
                 counter = 0
                 for accumulation_index in range(opt.num_accumulations):
                     curr_data = get_curr_data(data, opt.batch_size, counter)
-                    model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
+                    curr_data_style = get_curr_data(data_style, opt_style.batch_size, 0)
+                    model.set_input(curr_data,
+                                    style_img=curr_data_style)  # unpack data from dataset and apply preprocessing
+                    #model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
                     model.optimize_D_OCR()
                     counter += 1
                 model.optimize_D_OCR_step()
@@ -102,6 +140,8 @@ if __name__ == '__main__':
                 save_result = total_iters % opt.update_html_freq == 0
                 model.compute_visuals()
                 visualizer.display_current_results(model.get_current_visuals(),model.get_current_fake_labels(),epoch, save_result)
+                #TODO- add
+                visualizer.plot_current_style(*model.get_current_style())
 
             if total_iters % opt.print_freq == 0 or total_iters // opt.print_freq> counter_print:    # print training losses and save logging information to the disk
                 counter_print += 1

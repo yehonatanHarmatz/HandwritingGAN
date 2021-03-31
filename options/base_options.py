@@ -102,6 +102,16 @@ class BaseOptions():
                  '(default: %(default)s)')
 
         parser.add_argument('--len_style_features', type=int, default=512, help='len of the features endocer')
+        parser.add_argument('--k', type=int, default=15,
+                            help='number of images in the style object')
+        parser.add_argument('--aug', action='store_true', default=False,
+                            help='use augmentation (currently relevant for OCR training)')
+        parser.add_argument('--aug_dataroot', type=str, default=None,
+                            help='augmentation images file location, default is None (no augmentation)')
+        parser.add_argument('--device', type=str, default='cuda',
+                            help='device')
+        #parser.add_argument('--style_batch_size', type=int,
+                            #help='style batch size ')
 
 
         ### Model stuff ###

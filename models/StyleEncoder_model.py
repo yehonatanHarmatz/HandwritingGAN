@@ -54,7 +54,8 @@ class StyleEncoder(nn.Module):
         if not already_trained:
             self.optimizer = torch.optim.Adam(self.get_parmas_to_optimize(),lr=0.005*0.1,weight_decay=0.05*1)
         self.mixed=opt.autocast_bit
-        self.scaler =opt.scaler
+        if self.mixed:
+            self.scaler =opt.scaler
 
         #= opt.scaler =
         #torch.optim.Adam(model.parameters(),

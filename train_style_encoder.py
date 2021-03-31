@@ -24,13 +24,15 @@ def main():
     opt_val = TrainOptions().parse()
     opt_val.dataname += "_val"
     opt_val.dataroot = dataset_catalog.datasets[opt_val.dataname]
-    opt_tr.scaler = GradScaler()
-    opt_val.scaler = GradScaler()
+    if opt_tr.autocast_bit:
+        opt_tr.scaler = GradScaler()
+    #opt_val.scaler = GradScaler()
     opt_val.test=True
     te_dataset = create_dataset(opt_val)  # create a dataset given opt.dataset_mode and other options
     te_dataset_size = len(te_dataset)
-    if opt_tr.batch_size_test == 0:
-        opt_tr.batch_size_test = min(te_dataset_size, opt_tr.batch_size)
+    if opt_val.batch_size_test == 0:
+        #opt_tr.batch_size_test = min(te_dataset_size, opt_tr.batch_size)
+        opt_val.batch_size_test = min(te_dataset_size, opt_val.batch_size)
     else:
         opt_val.batch_size_test = min(te_dataset_size, opt_val.batch_size_test)
     print(te_dataset_size)
@@ -40,7 +42,7 @@ def main():
     visualizer = Visualizer(opt_tr)
     best_val_acc = 0
     best_val_loss = float('inf')
-    # '''
+    '''
     for a in tr_dataset:
         im = tensor2im(a['style'])
         visualizer.plot_current_style(im, str(int(a['label'])))
@@ -95,9 +97,9 @@ def main():
             model.set_input(curr_data)  # unpack data from dataset and apply preprocessing
             model.optimize()
             model.optimize_step()
-            if opt.autocast_bit:
-                opt.scaler.update()
-            if total_iters // opt.display_freq > c_display:
+            if opt_tr.autocast_bit:
+                opt_tr.scaler.update()
+            if total_iters // opt_tr.display_freq > c_display:
                 c_display += 1
                 print(model.cur_loss)
                 allocated = torch.cuda.memory_allocated() / 1024 / 1024 / 1024
@@ -146,7 +148,7 @@ def main():
                             print(f"Test {i}/{te_dataset_size // opt_val.batch_size_test}: {torch.max(output.data, 1)[1]}, {data['label']}")
                             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
                         accuracy = 100 * correct / counter_i
-                        best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt_tr)
+                        best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt_val)
                     first = False
                 losses['val'] = float(model.val_loss / (te_dataset_size - (te_dataset_size % opt_val.batch_size_test)))
                 print(losses)
@@ -195,7 +197,7 @@ def main():
         accs = OrderedDict()
         accs["Val Accuracy"] = accuracy
         first = False
-        best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt)
+        best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt_val)
         correct = 0
         counter_i = 0
         with torch.no_grad():
@@ -220,11 +222,11 @@ def main():
 
 def save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt):
     if accuracy > best_val_acc:
-        model.save_network('bast_accuracy_val')
+        model.save_network('bast_accuracy_val'+str(accuracy))
         best_val_acc = accuracy
     loss = float(model.val_loss / (te_dataset_size - (te_dataset_size % opt.batch_size_test)))
     if loss < best_val_loss:
-        model.save_network('bast_loss_val')
+        model.save_network('bast_loss_val'+str(loss))
         best_val_loss = loss
     return best_val_acc, best_val_loss
 

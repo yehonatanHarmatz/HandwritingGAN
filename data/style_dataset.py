@@ -20,14 +20,8 @@ class StyleDataset(BaseDataset):
     def modify_commandline_options(parser, is_train):
         # parser.add_argument('--collate', action='store_false', default=True,
         #                     help='use regular collate function in data loader')
-        parser.add_argument('--aug_dataroot', type=str, default=None,
-                            help='augmentation images file location, default is None (no augmentation)')
-        parser.add_argument('--device', type=str, default='cuda',
-                            help='device')
-        parser.add_argument('--aug', action='store_true', default=False,
-                            help='use augmentation (currently relevant for OCR training)')
-        parser.add_argument('--k', type=int, default=15,
-                            help='number of images in the style object')
+
+
         return parser
 
     def __init__(self, opt, target_transform=None):
@@ -51,7 +45,7 @@ class StyleDataset(BaseDataset):
         with self.env.begin(write=False) as txn:
             nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
             self.nSamples = nSamples
-            self.maping_id = {i:k for i,k in enumerate(ast.literal_eval(txn.get('writers_mapping_id'.encode('utf-8')).decode('utf-8')))}
+            #self.maping_id = {i:k for i,k in enumerate(ast.literal_eval(txn.get('writers_mapping_id'.encode('utf-8')).decode('utf-8')))}
 
         if opt.aug and opt.aug_dataroot is not None:
             self.env_aug = lmdb.open(

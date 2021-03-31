@@ -23,7 +23,7 @@ class DiscriminatorWriter(Discriminator):
         out = self.output_layer(h)
         return out
     #def
-class DiscriminatorWriter(nn.Module):
+"""class DiscriminatorWriter(nn.Module):
     def __init__(self,num_writers):
         self.model=resnet18(pretrained=False)
         self.num_writers=num_writers
@@ -33,4 +33,4 @@ class DiscriminatorWriter(nn.Module):
     def forward(self,x):
         return self.model(x)
     def parameters(self, recurse: bool = True):
-        return self.model.parameters()
+        return self.model.parameters()"""

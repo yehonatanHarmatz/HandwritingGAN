@@ -129,7 +129,7 @@ class Visualizer():
                 s="fakes: "
                 for l in labels[0]:
                     s+=l.decode("utf-8")+","
-                s+='\ntrue: '
+                s+='\n\ntrue: '
                 for l in labels[1]:
                     s+=l.decode("utf-8")+","
                 self.vis.text(s,win=self.display_id + 0x666)

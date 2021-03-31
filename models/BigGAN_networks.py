@@ -143,7 +143,7 @@ class Generator(nn.Module):
                  BN_eps=1e-5, SN_eps=1e-12, G_fp16=False,
                  G_init='ortho', skip_init=False,
                  G_param='SN', norm_style='bn',gpu_ids=[], bn_linear='embed', input_nc=3,
-                 one_hot=False, first_layer=False, one_hot_k=1,len_style_features=512,
+                 one_hot=False, first_layer=False, one_hot_k=1,len_style_features=512,batch_size=8,
                  **kwargs):
         super(Generator, self).__init__()
         self.name = 'G'
@@ -202,6 +202,7 @@ class Generator(nn.Module):
         self.bn_linear = bn_linear
 
         self.len_style_features=len_style_features
+        self.batch_size= batch_size
         # If using hierarchical latents, adjust z
         #default- true
         if self.hier:
@@ -371,7 +372,7 @@ class Generator(nn.Module):
             else:
                 ys = [torch.cat([y.type(torch.float32), item], 1) for item in zs[1:]]
             if len(s.shape)<2:
-                s=torch.reshape(s, (4,-1))
+                s=torch.reshape(s, (self.batch_size,-1))
                 #s = s.unsqueeze(2)
             #item is 4,32 ss is 4096,1, y is 4,12,80
             ss = [torch.cat([s.type(torch.float32), item], 1) for item in zs[1:]]

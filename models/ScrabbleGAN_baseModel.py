@@ -41,7 +41,8 @@ class ScrabbleGANBaseModel(BaseModel):
             opt.D_init = os.path.join(opt.checkpoints_dir, opt.saved_model)
             opt.OCR_init = os.path.join(opt.checkpoints_dir, opt.saved_model)
         # specify the training losses you want to print out. The program will call base_model.get_current_losses to plot the losses to the console and save them to the disk.
-        self.loss_names = ['G', 'D', 'Dreal', 'Dfake', 'OCR_real', 'OCR_fake', 'grad_fake_OCR', 'grad_fake_adv']
+        #, 'grad_fake_OCR', 'grad_fake_adv'
+        self.loss_names = ['G', 'D', 'Dreal', 'Dfake', 'OCR_real', 'OCR_fake','Dw_real','Dw_fake']
         self.loss_G = torch.zeros(1)
         self.loss_D =torch.zeros(1)
         self.loss_Dreal =torch.zeros(1)
@@ -57,6 +58,7 @@ class ScrabbleGANBaseModel(BaseModel):
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks to save and load networks.
         # you can use opt.isTrain to specify different behaviors for training and test. For example, some networks will not be used during test, and you don't need to load them.
         #TODO- add 'S' to models
+        #
         self.model_names = ['G', 'D', 'OCR','Dw']
         # define networks; you can use opt.isTrain to specify different behaviors for training and test.
         # Next, build the model
@@ -68,12 +70,13 @@ class ScrabbleGANBaseModel(BaseModel):
         self.netconverter = strLabelConverter(opt.alphabet)
         self.netOCR = CRNN(opt).to(self.device)
         # TODO- add dw to self
-        #self.netDw=DiscriminatorWriter(self.num_writers).to(self.device)
-        #self.Dwcriterion=torch.nn.CrossEntropyLoss()
+        self.netDw=DiscriminatorWriter(self.num_writers).to(self.device)
+        self.Dwcriterion=torch.nn.CrossEntropyLoss()
 
         # TODO- add S to self
         path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\\checkpoints\\_style15IAMcharH32rmPunct_GANres16_bs128\\9_net_Style_Encoder.pth"
-        self.style_encoder = StyleEncoder(self.opt,already_trained=True,path=path_s)
+        #self.style_encoder = StyleEncoder(self.opt,already_trained=True,path=path_s)
+        self.style_encoder = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s).to(self.device)
         # won't be trained anymore
         self.style_encoder.eval()
         self.len_style_features=512
@@ -100,12 +103,12 @@ class ScrabbleGANBaseModel(BaseModel):
             self.optimizer_OCR = torch.optim.Adam(self.netOCR.parameters(),
                                                 lr=opt.OCR_lr, betas=(opt.OCR_B1, opt.OCR_B2), weight_decay=0,
                                                 eps=opt.adam_eps)
-            """self.optimizer_Dw=torch.optim.Adam(self.netDw.parameters(),
+            self.optimizer_Dw=torch.optim.Adam(self.netDw.parameters(),
                                                 lr=opt.OCR_lr, betas=(opt.OCR_B1, opt.OCR_B2), weight_decay=0,
-                                                eps=opt.adam_eps)"""
+                                                eps=opt.adam_eps)
             #TODO- check if need to add
-            self.optimizers = [self.optimizer_G, self.optimizer_OCR]
-            #self.optimizer_Dw.zero_grad()
+            self.optimizers = [self.optimizer_G, self.optimizer_OCR,self.optimizer_Dw]
+            self.optimizer_Dw.zero_grad()
             self.optimizer_G.zero_grad()
             self.optimizer_OCR.zero_grad()
 
@@ -277,7 +280,14 @@ class ScrabbleGANBaseModel(BaseModel):
         self.idx_real = input['idx']  # get image paths
         #TODO- added s calced with batch size in mind
         #self.input_features=torch.zeros((self.opt.batch_size,self.len_style_features)).to(self.device)#self.style_encoder(style_img)
-        self.input_features
+        self.cur_style_image = style_img['style']#.to(self.device)
+        self.cur_writer_label= style_img['label']#.to(self.device)
+        #self.style_encoder.set_input()
+        with torch.no_grad():
+            self.input_features =torch.squeeze(self.style_encoder(style_img['style']))
+        #print(self.input_features.shape)
+        #]
+
     def load_networks(self, epoch):
         BaseModel.load_networks(self, epoch)
         if self.opt.single_writer:
@@ -329,13 +339,15 @@ class ScrabbleGANBaseModel(BaseModel):
     #TODO- add S input to D, add Dw to loss
     def backward_D_OCR(self):
         # Real
+        # ,'s':self.input_features
+        # ,'s':self.input_features
         if self.real_z_mean is None:
             pred_real = self.netD(self.real.detach())
         else:
-            pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach(),'s':self.input_features})
+            pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach()})
         # Fake
         try:
-            pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach(),'s':self.input_features})
+            pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach()})
         except:
             print('a')
         # Combined loss
@@ -347,11 +359,11 @@ class ScrabbleGANBaseModel(BaseModel):
         loss_OCR_real = self.OCR_criterion(self.pred_real_OCR, self.text_encode.detach(), preds_size, self.len_text.detach())
         self.loss_OCR_real = torch.mean(loss_OCR_real[~torch.isnan(loss_OCR_real)])
         # TODO- add loss Dw
-        #preds=self.netDw(self.real.detach())
-        #self.loss_Dw = self.Dwcriterion(preds,num_writer)
+        preds=self.netDw(self.real.detach())
+        self.loss_Dw_real = self.Dwcriterion(preds,self.cur_writer_label)
         # total loss
 
-        loss_total = self.loss_D + self.loss_OCR_real
+        loss_total = self.loss_D + self.loss_OCR_real + self.loss_Dw_real
 
         # backward
         loss_total.backward()
@@ -411,10 +423,11 @@ class ScrabbleGANBaseModel(BaseModel):
         preds_size = torch.IntTensor([pred_fake_OCR.size(0)] * self.opt.batch_size).detach()
         loss_OCR_fake = self.OCR_criterion(pred_fake_OCR, self.text_encode_fake.detach(), preds_size, self.len_text_fake.detach())
         self.loss_OCR_fake = torch.mean(loss_OCR_fake[~torch.isnan(loss_OCR_fake)])
-        #to do- add Dw
-        #self.netDw(self.fake)
+        #TODO - add Dw
+
+        self.loss_Dw_fake= self.netDw(self.fake)
         # total loss
-        self.loss_T = self.loss_G + self.opt.gb_alpha*self.loss_OCR_fake
+        self.loss_T = self.loss_G + self.opt.gb_alpha*self.loss_OCR_fake+self.loss_Dw_fake
         grad_fake_OCR = torch.autograd.grad(self.loss_OCR_fake, self.fake, retain_graph=True)[0]
         self.loss_grad_fake_OCR = 10**6*torch.mean(grad_fake_OCR**2)
         grad_fake_adv = torch.autograd.grad(self.loss_G, self.fake, retain_graph=True)[0]
@@ -435,7 +448,8 @@ class ScrabbleGANBaseModel(BaseModel):
             # self.loss_OCR_fake = a.detach() * self.loss_OCR_fake + b.detach() * torch.sum(self.fake)
             self.loss_OCR_fake = a.detach() * self.loss_OCR_fake
             #onlyOCR default = false
-            self.loss_T = (1-1*self.opt.onlyOCR)*self.loss_G + self.loss_OCR_fake
+            #
+            self.loss_T = (1-1*self.opt.onlyOCR)*self.loss_G + self.loss_OCR_fake +self.loss_Dw_fake
             self.loss_T.backward(retain_graph=True)
             grad_fake_OCR = torch.autograd.grad(self.loss_OCR_fake, self.fake, create_graph=False, retain_graph=True)[0]
             grad_fake_adv = torch.autograd.grad(self.loss_G, self.fake, create_graph=False, retain_graph=True)[0]
@@ -459,7 +473,7 @@ class ScrabbleGANBaseModel(BaseModel):
         self.optimizer_D.zero_grad()
         if self.opt.OCR_init in ['glorot', 'xavier', 'ortho', 'N02']:
             self.optimizer_OCR.zero_grad()
-        #self.optimizer_Dw.zero_grad()
+        self.optimizer_Dw.zero_grad()
         self.backward_D_OCR()
 
     def optimize_OCR(self):
@@ -479,10 +493,10 @@ class ScrabbleGANBaseModel(BaseModel):
         self.optimizer_D.step()
         if self.opt.OCR_init in ['glorot', 'xavier', 'ortho', 'N02']:
             self.optimizer_OCR.step()
-        #self.optimizer_Dw.step()
+        self.optimizer_Dw.step()
         self.optimizer_D.zero_grad()
         self.optimizer_OCR.zero_grad()
-        #self.optimizer_Dw.zero_grad()
+        self.optimizer_Dw.zero_grad()
 
     def optimize_D_step(self):
         self.optimizer_D.step()
@@ -585,3 +599,6 @@ class ScrabbleGANBaseModel(BaseModel):
 
     def get_current_fake_labels(self):
         return self.words,self.label
+    def get_current_style(self):
+        print(self.cur_style_image.shape,self.cur_writer_label.shape)
+        return self.cur_style_image[0, :, :,:].unsqueeze(0),str(int(self.cur_writer_label[0]))
