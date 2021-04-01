@@ -209,7 +209,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
                 # outfile.seek(0)
                 # cache[style_key] = outfile.read()
                 if labeled:
-                    label_key = 'label-%09d' % cnt
+                    label_key = 'writer-%09d' % cnt
                     cache[label_key] = str(map_index[int(writer)])
                 # d = {'imgs': imgs}
                 # if labeled:
@@ -250,7 +250,7 @@ def main():
     h_gap = 0  # Insert a gap below and above the text
     discard_wide = True  # Discard images which have a character width 3 times larger than the maximum allowed character size (instead of resizing them) - this helps discard outlier images
     discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
-    k = 15  # the number of images in any unit of the dataset
+    k = 1  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
 
     # writers_tr = list(map(int, list(writers_images.keys())))
@@ -259,7 +259,7 @@ def main():
     # map_index = {writers_tr[i]: i for i in range(len(writers_tr))}
     # pprint(sorted([(len(writers_images[wr]), map_index[int(wr)], int(wr)) for wr in writers_images], reverse=True))
 
-    if mode == 'tr':
+    if mode == 'tr' and k > 1:
         create_balance_data(writers_images,multiply=1)
 
     '''

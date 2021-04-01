@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
-
+import ast
+import io
 import random
 import torch
 from torch.utils.data import Dataset
@@ -99,12 +100,14 @@ class TextDataset(BaseDataset):
             item = {'img': img, 'img_path': img_key, 'idx':index}
 
             if self.labeled:
-                label_key = 'label-%09d' % index
-                label = txn.get(label_key.encode('utf-8'))
-
+                label_key = 'words-%09d' % index
+                label = np.load(io.BytesIO(txn.get(label_key.encode('utf-8'))))[0]
+                writer_key = 'writer-%09d' % index
+                writer = txn.get(writer_key.encode('utf-8'))
                 if self.target_transform is not None:
                     label = self.target_transform(label)
                 item['label'] = label
+                item['writer'] = writer
 
 
             if hasattr(self,'Z'):
@@ -132,6 +135,8 @@ class TextCollator(object):
         if 'label' in batch[0].keys():
             labels = [item['label'] for item in batch]
             item['label'] = labels
+            writers = [item['writer'] for item in batch]
+            item['writer'] = writers
         if 'z' in batch[0].keys():
             z = torch.stack([item['z'] for item in batch])
             item['z'] = z
@@ -148,6 +153,8 @@ class RegularCollator(object):
         if 'label' in batch[0].keys():
             labels = [item['label'] for item in batch]
             item['label'] = labels
+            writers = [item['writer'] for item in batch]
+            item['writer'] = writers
         if 'z' in batch[0].keys():
             z = torch.stack([item['z'] for item in batch])
             item['z'] = z

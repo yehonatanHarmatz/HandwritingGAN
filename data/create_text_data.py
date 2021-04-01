@@ -156,6 +156,7 @@ def create_img_label_list(top_dir,dataset, mode, words, author_number, remove_pu
                     line = f.read()
                     annotation_content = xmltodict.parse(line)
                     lines = annotation_content['form']['handwritten-part']['line']
+                    writer = annotation_content['form']['@writer-id']
                     if words:
                         lines_list = []
                         for j in range(len(lines)):
@@ -173,7 +174,7 @@ def create_img_label_list(top_dir,dataset, mode, words, author_number, remove_pu
                     id = line['@id']
                     imagePath = os.path.join(im_dirs[i], id + '.png')
                     image_path_list.append(imagePath)
-                    label_list.append(label)
+                    label_list.append((label, writer))
 
     elif dataset=='RIMES':
         if mode=='tr':
@@ -217,7 +218,7 @@ def createDataset(image_path_list, label_list, outputPath, mode, author_id, remo
 
     for i in tqdm(range(nSamples)):
         imagePath = image_path_list[i]
-        label = label_list[i]
+        label, writer = label_list[i]
         if not os.path.exists(imagePath):
             print('%s does not exist' % imagePath)
             continue
@@ -253,12 +254,14 @@ def createDataset(image_path_list, label_list, outputPath, mode, author_id, remo
         imgByteArr = io.BytesIO()
         im.save(imgByteArr, format='tiff')
         wordBin = imgByteArr.getvalue()
-        imageKey = 'text-image-%09d' % cnt
-        labelKey = 'text-label-%09d' % cnt
+        imageKey = 'image-%09d' % cnt
+        labelKey = 'words-%09d' % cnt
+        writerKey = 'writer-%09d' % cnt
 
         cache[imageKey] = wordBin
         if labeled:
             cache[labelKey] = label
+            cache[writerKey] = writer
         if cnt % 1000 == 0:
             writeCache(env, cache)
             cache = {}

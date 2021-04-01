@@ -45,7 +45,7 @@ class StyleDataset(BaseDataset):
         with self.env.begin(write=False) as txn:
             nSamples = int(txn.get('num-samples'.encode('utf-8')).decode('utf-8'))
             self.nSamples = nSamples
-            #self.maping_id = {i:k for i,k in enumerate(ast.literal_eval(txn.get('writers_mapping_id'.encode('utf-8')).decode('utf-8')))}
+            self.mapping_id = {i:k for i,k in enumerate(ast.literal_eval(txn.get('writers_mapping_id'.encode('utf-8')).decode('utf-8')))}
 
         if opt.aug and opt.aug_dataroot is not None:
             self.env_aug = lmdb.open(
@@ -120,7 +120,7 @@ class StyleDataset(BaseDataset):
             # img.save('my.png')
             # img.show()
             if self.labeled:
-                label_key = 'label-%09d' % index
+                label_key = 'writer-%09d' % index
                 label = int(txn.get(label_key.encode('utf-8')).decode())
                 # label = int(style['label'])
                 if self.target_transform is not None:
