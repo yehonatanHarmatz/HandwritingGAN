@@ -190,12 +190,16 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
                 imgs.append(img)
                 words.append(label)
             if len(imgs) == k:
-                style_key = 'style-%09d' % cnt
-                f = io.BytesIO()
-                np.save(f, imgs)
-                a = f.getvalue()
-                # b = np.load(io.BytesIO(a))
-                cache[style_key] = a
+                if k == 1:
+                    labelKey = 'image-%09d' % cnt
+                    cache[labelKey] = imgs[0]
+                else:
+                    style_key = 'style-%09d' % cnt
+                    f = io.BytesIO()
+                    np.save(f, imgs)
+                    a = f.getvalue()
+                    # b = np.load(io.BytesIO(a))
+                    cache[style_key] = a
                 imgs = []
                 if labeled:
                     words_key = 'words-%09d' % cnt
@@ -230,7 +234,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'val'  # tr/te/val/all
+    mode = 'tr'  # tr/te/val/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:

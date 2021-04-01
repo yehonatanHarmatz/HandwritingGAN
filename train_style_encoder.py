@@ -54,8 +54,8 @@ def main():
     '''
     '''
     for a in tr_dataset:
-        im = tensor2im(a['style'])
-        visualizer.plot_current_style(im, str(int(a['label'])))
+        im = tensor2im(a['img'])
+        visualizer.plot_current_style(im, str(int(a['writer'][0].decode())))
         time.sleep(1)
         # img = Image.fromarray(im, 'RGB')
         # # img.save('my.png')
