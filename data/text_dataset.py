@@ -101,9 +101,10 @@ class TextDataset(BaseDataset):
 
             if self.labeled:
                 label_key = 'words-%09d' % index
-                label = np.load(io.BytesIO(txn.get(label_key.encode('utf-8'))))[0]
+                #,allow_pickle=True
+                label = str(np.load(io.BytesIO(txn.get(label_key.encode('utf-8'))))[0]).encode('utf-8')
                 writer_key = 'writer-%09d' % index
-                writer = txn.get(writer_key.encode('utf-8'))
+                writer = int(txn.get(writer_key.encode('utf-8')).decode('utf-8'))
                 if self.target_transform is not None:
                     label = self.target_transform(label)
                 item['label'] = label

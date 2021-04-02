@@ -75,7 +75,9 @@ def show_features(model, dataloader_tr, dataloader_te):
 
 
 
-path='.\\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\5_net_Style_Encoder.pth'
+#path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\5_net_Style_Encoder.pth'
+path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth'
+#path="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs256\\bast_accuracy_val82.34375_net_Style_Encoder.pth"
 #pretrain = torch.load()
 opt = TrainOptions().parse()
 print(opt)
@@ -84,6 +86,7 @@ opt.batch_size=128
 opt.dataset_mode='style'
 torch.backends.cudnn.benchmark = True
 device = "cuda"
+opt.test=True
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)

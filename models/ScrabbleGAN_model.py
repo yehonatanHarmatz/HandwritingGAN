@@ -9,8 +9,8 @@ activation_dict = {'inplace_relu': nn.ReLU(inplace=True),
 
 class ScrabbleGANModel(ScrabbleGANBaseModel):
 
-    def __init__(self, opt):
-        ScrabbleGANBaseModel.__init__(self, opt)  # call the initialization method of BaseModel
+    def __init__(self, opt,opt_style):
+        ScrabbleGANBaseModel.__init__(self, opt,opt_style)  # call the initialization method of BaseModel
         self.netD = Discriminator(**vars(opt))
         if len(opt.gpu_ids) > 0:
             self.netD.to(opt.gpu_ids[0])

@@ -16,6 +16,9 @@ python train.py --name_prefix demo --dataname RIMEScharH32W16 --capitalize --dis
 See options/base_options.py and options/train_options.py for more training options.
 """
 import time
+
+from torch.cuda.amp import GradScaler
+
 from options.train_options import TrainOptions
 from data import create_dataset, dataset_catalog
 from models import create_model
@@ -38,7 +41,7 @@ if __name__ == '__main__':
     #prev_mode=opt.dataset_mode
     #change the name of dataset
     opt_style= TrainOptions().parse()
-    opt_style.dataname='style15IAMcharH32rmPunct'
+    opt_style.dataname='style15IAMcharH32rmPunct_all'
     opt_style.dataroot = dataset_catalog.datasets[opt_style.dataname]
     opt_style.dataset_mode ="style"
     #opt_style.batch_size=opt_style.style_batch_size
@@ -46,13 +49,14 @@ if __name__ == '__main__':
     tr_dataset_style = create_dataset(opt_style)  # create a dataset given opt.dataset_mode and other options
     tr_dataset_size = len(tr_dataset_style)
     print('The number of  Style training images = %d' % tr_dataset_size)
+    #opt.style_opt = opt_style
     #opt.dataname=prev_name
     #opt.dataset_mode=prev_mode
     #TODO- handle 16bit in GAN and Dw
     # OUR VARIABLE
-    #if opt.autocast_bit:
-        #opt.scaler = GradScaler()
-    model = create_model(opt)      # create a model given opt.model and other options
+    if opt.autocast_bit:
+        opt.scaler = GradScaler()
+    model = create_model(opt,opt_style)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers
     if opt.single_writer:
         opt.G_init='N02'
@@ -107,6 +111,8 @@ if __name__ == '__main__':
                     counter += 1
                 model.optimize_G_step()
                 model.optimize_D_OCR_step()
+                if opt.autocast_bit:
+                    opt.scaler.update()
             # defulat=4 so else
             else:
                 if (i % opt.num_critic_train) == 0:
@@ -130,6 +136,8 @@ if __name__ == '__main__':
                     model.optimize_D_OCR()
                     counter += 1
                 model.optimize_D_OCR_step()
+                if opt.autocast_bit:
+                    opt.scaler.update()
                 # print(model.netG.linear.bias[:10])
                 # print('G',model.loss_G, 'D', model.loss_D, 'Dreal',model.loss_Dreal, 'Dfake', model.loss_Dfake,
                 #       'OCR_real', model.loss_OCR_real, 'OCR_fake', model.loss_OCR_fake, 'grad_fake_OCR', model.loss_grad_fake_OCR, 'grad_fake_adv', model.loss_grad_fake_adv)

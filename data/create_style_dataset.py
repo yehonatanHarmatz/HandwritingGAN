@@ -33,7 +33,8 @@ def create_writers_dict(top_dir,dataset, mode, words, remove_punc, writers_list=
     if dataset == 'IAM':
         labels_name = 'original'
         if mode == 'all':
-            mode = ['te', 'va1', 'va2', 'tr']
+            #['te', 'va1', 'va2', 'tr']
+            mode = ['te', 'val', 'tr']
         elif mode == 'valtest':
             mode = ['te', 'va1', 'va2']
         else:
@@ -163,8 +164,10 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
         os.makedirs(outputPath)
     else:
         os.makedirs(outputPath)
-    a = 0.5 if mode in ['val', 'test'] else 3
-    env = lmdb.open(outputPath, map_size=int(a*1073741824))
+    a = 0.6 if mode in ['val', 'test'] else 3
+    if k==1:
+        a= 0.4 if mode in ['val', 'test'] else 1
+    env = lmdb.open(outputPath, map_size=int(a*1073741824/2))
     cache = {}
     nSamples = 0
     cnt = 1
@@ -234,7 +237,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'tr'  # tr/te/val/all
+    mode = 'all'  # tr/te/val/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:
@@ -254,7 +257,7 @@ def main():
     h_gap = 0  # Insert a gap below and above the text
     discard_wide = True  # Discard images which have a character width 3 times larger than the maximum allowed character size (instead of resizing them) - this helps discard outlier images
     discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
-    k = 1  # the number of images in any unit of the dataset
+    k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
 
     # writers_tr = list(map(int, list(writers_images.keys())))
