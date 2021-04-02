@@ -88,25 +88,32 @@ class StyleDataset(BaseDataset):
             a = txn.get(style_key.encode('utf-8'))
             style = np.load(io.BytesIO(a))
             imgs = []
+            org_size = []
             for imgbuf in style:
                 buf = six.BytesIO()
                 buf.write(imgbuf)
                 buf.seek(0)
                 try:
                     im = Image.open(buf)
+                    im2 = im
                     im = im.resize((im.size[0], 224//self.k))
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
                 img = ToTensor()(im).to(self.device)
+                img2 = ToTensor()(im2).to(self.device)
                 imgs.append(img)
+                org_size.append(img2)
             # print([image for image in imgs])
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
             # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
             imgs_tensor = concat_images(imgs, normalized=('Normalize' in str(self.transform)))
+            imgs_tensor_org = concat_images(org_size, normalized=('Normalize' in str(self.transform)))
             if self.transform is not None:
                 img_pil=torchvision.transforms.ToPILImage()(imgs_tensor)
+                img_pil_org=torchvision.transforms.ToPILImage()(imgs_tensor_org)
                 imgs_tensor = self.transform(img_pil).to(self.device)
+                imgs_tensor_org = self.transform(img_pil_org).to(self.device)
                 #print(self.transform)
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
@@ -114,7 +121,7 @@ class StyleDataset(BaseDataset):
             # img.show()
             # imgs_tensor = ToTensor()(im).to(self.device)
             # imgs_tensor = torchvision.transforms.Normalize([0,0,0], [1,1,1], inplace=False)(imgs_tensor)
-            item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index}
+            item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index, 'original':imgs_tensor_org}
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
             # img.save('my.png')
