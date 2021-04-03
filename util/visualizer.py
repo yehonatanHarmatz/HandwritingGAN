@@ -282,7 +282,21 @@ class Visualizer():
                 win=self.display_id+0x4141)
         except VisdomExceptionBase:
             self.create_visdom_connections()
-
+    def plot_precision(self,epoch, counter_ratio,macro):
+        if not hasattr(self, 'plot_macro'):
+            self.plot_macro = {'X': [], 'Y': [], 'legend': list(macro.keys())}
+        self.plot_macro['X'].append(epoch + counter_ratio)
+        self.plot_macro['Y'].append([macro[k] for k in self.plot_macro['legend']])
+        self.vis.line(
+            X=np.stack([np.array(self.plot_macro['X'])] * len(self.plot_macro['legend']), 1),
+            Y=np.array(self.plot_macro['Y']),
+            opts={
+                'title': self.name + ' Macro precision over time',
+                'legend': self.plot_macro['legend'],
+                'xlabel': 'epoch',
+                'ylabel': 'Precision'},
+            win='macro_window')
+    # TODO call with style
     def plot_current_style(self, style_tensor, label):
         image_numpy = util.tensor2im(style_tensor)
         try:
