@@ -211,11 +211,13 @@ def main():
                 for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
                     w_p_int = int(w_pred)
                     w_r_int = int(w_real)
-                    _, y = correct_per_writer[w_p_int]
-                    x, _ = correct_per_writer[w_r_int]
+                    x1, y1 = correct_per_writer[w_p_int]
+                    x2, y2 = correct_per_writer[w_r_int]
                     if w_p_int == w_r_int:
-                        x += 1
-                    correct_per_writer[w_r_int] = x, y + 1
+                        # x += 1
+                        correct_per_writer[w_r_int] = x2 + 1, y2 + 1
+                    else:
+                        correct_per_writer[w_p_int] = x1, y1 + 1
                 correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
         micro_val, macro_val = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
@@ -239,22 +241,24 @@ def main():
                 for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
                     w_p_int = int(w_pred)
                     w_r_int = int(w_real)
-                    _, y = correct_per_writer[w_p_int]
-                    x, _ = correct_per_writer[w_r_int]
+                    x1, y1 = correct_per_writer[w_p_int]
+                    x2, y2 = correct_per_writer[w_r_int]
                     if w_p_int == w_r_int:
-                        x += 1
-                    correct_per_writer[w_r_int] = x, y + 1
+                        # x += 1
+                        correct_per_writer[w_r_int] = x2 + 1, y2 + 1
+                    else:
+                        correct_per_writer[w_p_int] = x1, y1 + 1
         micro_tr, macro_tr = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
         print("Train Accuracy = {}".format(accuracy))
         accs["Train Accuracy"] = accuracy
         #plot the accuracies
-        visualizer.plot_accuracy(epoch,1,accs)
+        visualizer.plot_accuracy(epoch,0,accs)
         prec_dict["Macro Precision val"] = macro_val
         prec_dict["Micro Precision val"] = micro_val
         prec_dict["Micro Precision train"] = micro_tr
         prec_dict["Macro Precision train"] = macro_tr
-        visualizer.plot_precision(epoch, 1, prec_dict)
+        visualizer.plot_precision(epoch, 0, prec_dict)
 
         # model.update_learning_rate()  # update learning rates at the end of every epoch.
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
@@ -274,7 +278,7 @@ def save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_siz
 
 
 def calc_precision(data_list):
-    precision_list = [a/b for a, b in data_list]
+    precision_list = [ a/b for a, b in data_list if b!=0]
     import numpy as np
     macro = np.average(precision_list)
     micro = np.sum([a for a, _ in data_list])/np.sum([a for _, a in data_list])
