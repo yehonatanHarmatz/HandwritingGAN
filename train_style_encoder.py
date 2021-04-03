@@ -144,6 +144,7 @@ def main():
                 losses = OrderedDict()
                 losses['train'] = float(model.cur_loss / epoch_iter)
                 if first:
+                    micro_val = macro_val = micro_tr = macro_tr = 0
                     correct = 0
                     model.eval()
                     counter_i = 0
@@ -157,14 +158,6 @@ def main():
                             curr_data = get_curr_data(data, opt_val.batch_size_test, 0)
                             output = model(curr_data['style'], save_loss=True, train=False)
                             print(f"Test {i}/{te_dataset_size // opt_val.batch_size_test}: {torch.max(output.data, 1)[1]}, {data['label']}")
-                            for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
-                                w_p_int = int(w_pred)
-                                w_r_int = int(w_real)
-                                _, y = correct_per_writer[w_p_int]
-                                x, _ = correct_per_writer[w_r_int]
-                                if w_p_int == w_r_int:
-                                    x += 1
-                                correct_per_writer[w_r_int] = x, y + 1
                             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
                         accuracy = 100 * correct / counter_i
                         micro, macro = calc_precision(correct_per_writer)
@@ -177,8 +170,10 @@ def main():
                 #= OrderedDict()
                 prec_dict= OrderedDict()
 
-                prec_dict["Macro Precision"] = macro
-                prec_dict["Micro Precision"] = micro
+                prec_dict["Macro Precision val"] = macro_val
+                prec_dict["Micro Precision val"] = micro_val
+                prec_dict["Micro Precision train"] = micro_tr
+                prec_dict["Macro Precision train"] = macro_tr
                 visualizer.plot_precision(epoch, 1,  prec_dict)
                 if opt_tr.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / tr_dataset_size, losses)
@@ -227,7 +222,7 @@ def main():
                         x += 1
                     correct_per_writer[w_r_int] = x, y + 1
                 correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
-        micro, macro = calc_precision(correct_per_writer)
+        micro_val, macro_val = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
         print("Test Accuracy = {}".format(accuracy))
         accs = OrderedDict()
@@ -235,6 +230,7 @@ def main():
         first = False
         best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt_val)
         correct = 0
+        correct_per_writer = [(0, 0)] * 140
         counter_i = 0
         with torch.no_grad():
             for i, data in enumerate(tr_dataset):
@@ -245,6 +241,15 @@ def main():
                 output = model(curr_data['style'])
                 print(f"{i}/{tr_dataset_size // opt_tr.batch_size}:{torch.max(output.data, 1)[1]}, {data['label']}")
                 correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
+                for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
+                    w_p_int = int(w_pred)
+                    w_r_int = int(w_real)
+                    _, y = correct_per_writer[w_p_int]
+                    x, _ = correct_per_writer[w_r_int]
+                    if w_p_int == w_r_int:
+                        x += 1
+                    correct_per_writer[w_r_int] = x, y + 1
+        micro_tr, macro_tr = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
         print("Train Accuracy = {}".format(accuracy))
         accs["Train Accuracy"] = accuracy
