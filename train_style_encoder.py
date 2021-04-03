@@ -147,6 +147,7 @@ def main():
                     correct = 0
                     model.eval()
                     counter_i = 0
+                    correct_per_writer = [(0, 0)] * 140
                     model.zero_loss()
                     with torch.no_grad():
                         for i, data in enumerate(te_dataset):
@@ -156,14 +157,24 @@ def main():
                             curr_data = get_curr_data(data, opt_val.batch_size_test, 0)
                             output = model(curr_data['style'], save_loss=True, train=False)
                             print(f"Test {i}/{te_dataset_size // opt_val.batch_size_test}: {torch.max(output.data, 1)[1]}, {data['label']}")
+                            for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
+                                w_p_int = int(w_pred.decode())
+                                w_r_int = int(w_real.decode())
+                                _, y = correct_per_writer[w_p_int]
+                                x, _ = correct_per_writer[w_r_int]
+                                if w_p_int == w_r_int:
+                                    x += 1
+                                correct_per_writer[w_r_int] = x, y + 1
                             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
                         accuracy = 100 * correct / counter_i
+                        micro, macro = calc_precision(correct_per_writer)
                         best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt_val)
                     first = False
                 losses['val'] = float(model.val_loss / (te_dataset_size - (te_dataset_size % opt_val.batch_size_test)))
                 print(losses)
                 t_comp = (time.time() - iter_start_time) / (opt_tr.batch_size * opt_tr.num_accumulations)
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
+                visualizer.print_precision(epoch, epoch_iter, {'micro': micro, 'macro': macro}, t_comp, t_data)
                 if opt_tr.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / tr_dataset_size, losses)
 
@@ -190,6 +201,7 @@ def main():
         print('End of epoch %d / %d \t Time Taken: %d sec' % (
             epoch, opt_tr.niter + opt_tr.niter_decay, time.time() - epoch_start_time))
         correct = 0
+        correct_per_writer = [(0, 0)] * 140
         model.eval()
         counter_i = 0
         model.zero_loss()
@@ -201,7 +213,16 @@ def main():
                 curr_data = get_curr_data(data, opt_val.batch_size_test, 0)
                 output = model(curr_data['style'], save_loss=True, train=False)
                 print(f"Test {i}/{te_dataset_size // opt_val.batch_size_test}: {torch.max(output.data, 1)[1]}, {data['label']}")
+                for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
+                    w_p_int = int(w_pred.decode())
+                    w_r_int = int(w_real.decode())
+                    _, y = correct_per_writer[w_p_int]
+                    x, _ = correct_per_writer[w_r_int]
+                    if w_p_int == w_r_int:
+                        x += 1
+                    correct_per_writer[w_r_int] = x, y + 1
                 correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
+        micro, macro = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
         print("Test Accuracy = {}".format(accuracy))
         accs = OrderedDict()
@@ -240,6 +261,13 @@ def save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_siz
         best_val_loss = loss
     return best_val_acc, best_val_loss
 
+
+def calc_precision(data_list):
+    precision_list = [a/b for a, b in data_list]
+    import numpy as np
+    macro = np.avarge(precision_list)
+    micro = np.sum([a for a, _ in data_list])/np.sum([a for _, a in data_list])
+    return micro, macro
 
 if __name__ == '__main__':
     main()

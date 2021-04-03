@@ -1,3 +1,4 @@
+from data.style_dataset import StyleDataset
 from models.OCR_network import strLabelConverter
 from models.StyleEncoder_model import StyleEncoder
 from options.train_options import TrainOptions
@@ -35,4 +36,10 @@ s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s).to(
 w = strLabelConverter(opt.alphabet)
 vis = Visualizer(opt)
 gen = Generator(g, s, w, opt.dim_z, vis)
-gen.generate_word_image(some_style, some_word)
+opt_style_test = TrainOptions().parse()
+opt_style_test.blabla
+opt_style_test.blabla
+opt_style_test.blabla
+style_test_dataset = StyleDataset(opt_style_test)
+for i in range(len(style_test_dataset)):
+    gen.generate_word_image(style_test_dataset[i], some_word)
