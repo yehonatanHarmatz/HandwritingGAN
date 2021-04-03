@@ -296,6 +296,12 @@ class Visualizer():
                 'xlabel': 'epoch',
                 'ylabel': 'Precision'},
             win='macro_window')
+        message = '(epoch: %d, macro precision %.7f , macro precision %.7f) ' % (epoch,list(macro.values())[0],
+                                                                                 list(macro.values())[1])
+
+        print(message)  # print the message
+        with open(self.log_name, "a") as log_file:
+            log_file.write('%s\n' % message)  # save the message
     # TODO call with style
     def plot_current_style(self, style_tensor, label):
         image_numpy = util.tensor2im(style_tensor)

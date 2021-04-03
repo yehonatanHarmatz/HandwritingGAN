@@ -268,7 +268,7 @@ def save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_siz
         best_val_acc = accuracy
     loss = float(model.val_loss / (te_dataset_size - (te_dataset_size % opt.batch_size_test)))
     if loss < best_val_loss:
-        model.save_network('bast_loss_val'+str(loss))
+        #model.save_network('bast_loss_val'+str(loss))
         best_val_loss = loss
     return best_val_acc, best_val_loss
 
