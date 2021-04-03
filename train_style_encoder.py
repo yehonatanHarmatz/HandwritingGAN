@@ -208,16 +208,7 @@ def main():
                 curr_data = get_curr_data(data, opt_val.batch_size_test, 0)
                 output = model(curr_data['style'], save_loss=True, train=False)
                 print(f"Test {i}/{te_dataset_size // opt_val.batch_size_test}: {torch.max(output.data, 1)[1]}, {data['label']}")
-                for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
-                    w_p_int = int(w_pred)
-                    w_r_int = int(w_real)
-                    x1, y1 = correct_per_writer[w_p_int]
-                    x2, y2 = correct_per_writer[w_r_int]
-                    if w_p_int == w_r_int:
-                        # x += 1
-                        correct_per_writer[w_r_int] = x2 + 1, y2 + 1
-                    else:
-                        correct_per_writer[w_p_int] = x1, y1 + 1
+                calc_prec_data(correct_per_writer, output, data)
                 correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
         micro_val, macro_val = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
@@ -238,16 +229,7 @@ def main():
                 output = model(curr_data['style'])
                 print(f"{i}/{tr_dataset_size // opt_tr.batch_size}:{torch.max(output.data, 1)[1]}, {data['label']}")
                 correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
-                for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
-                    w_p_int = int(w_pred)
-                    w_r_int = int(w_real)
-                    x1, y1 = correct_per_writer[w_p_int]
-                    x2, y2 = correct_per_writer[w_r_int]
-                    if w_p_int == w_r_int:
-                        # x += 1
-                        correct_per_writer[w_r_int] = x2 + 1, y2 + 1
-                    else:
-                        correct_per_writer[w_p_int] = x1, y1 + 1
+                calc_prec_data(correct_per_writer, output, data)
         micro_tr, macro_tr = calc_precision(correct_per_writer)
         accuracy = 100 * correct / counter_i
         print("Train Accuracy = {}".format(accuracy))
@@ -276,6 +258,17 @@ def save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_siz
         best_val_loss = loss
     return best_val_acc, best_val_loss
 
+def calc_prec_data(correct_per_writer, output, data):
+    for w_pred, w_real in zip(torch.max(output.data, 1)[1], data['label']):
+        w_p_int = int(w_pred)
+        w_r_int = int(w_real)
+        x1, y1 = correct_per_writer[w_p_int]
+        x2, y2 = correct_per_writer[w_r_int]
+        if w_p_int == w_r_int:
+            # x += 1
+            correct_per_writer[w_r_int] = x2 + 1, y2 + 1
+        else:
+            correct_per_writer[w_p_int] = x1, y1 + 1
 
 def calc_precision(data_list):
     precision_list = [ a/b for a, b in data_list if b!=0]
