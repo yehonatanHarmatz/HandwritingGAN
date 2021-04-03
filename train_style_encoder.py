@@ -65,6 +65,8 @@ def main():
     c_print = 0
     c_save = 0
     c_display = 0
+    prec_dict = OrderedDict()
+
     first = True
     for epoch in range(opt_tr.epoch_count,
                        opt_tr.niter + opt_tr.niter_decay + 1):  # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
@@ -148,7 +150,6 @@ def main():
                     correct = 0
                     model.eval()
                     counter_i = 0
-                    correct_per_writer = [(0, 0)] * 140
                     model.zero_loss()
                     with torch.no_grad():
                         for i, data in enumerate(te_dataset):
@@ -160,7 +161,6 @@ def main():
                             print(f"Test {i}/{te_dataset_size // opt_val.batch_size_test}: {torch.max(output.data, 1)[1]}, {data['label']}")
                             correct += (torch.max(output.data, 1)[1] == data['label'].to(device)).sum().item()
                         accuracy = 100 * correct / counter_i
-                        micro, macro = calc_precision(correct_per_writer)
                         best_val_acc, best_val_loss = save_best_model(model, best_val_acc, best_val_loss, accuracy, te_dataset_size, opt_val)
                     first = False
                 losses['val'] = float(model.val_loss / (te_dataset_size - (te_dataset_size % opt_val.batch_size_test)))
@@ -168,13 +168,8 @@ def main():
                 t_comp = (time.time() - iter_start_time) / (opt_tr.batch_size * opt_tr.num_accumulations)
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
                 #= OrderedDict()
-                prec_dict= OrderedDict()
 
-                prec_dict["Macro Precision val"] = macro_val
-                prec_dict["Micro Precision val"] = micro_val
-                prec_dict["Micro Precision train"] = micro_tr
-                prec_dict["Macro Precision train"] = macro_tr
-                visualizer.plot_precision(epoch, 1,  prec_dict)
+
                 if opt_tr.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / tr_dataset_size, losses)
 
@@ -255,6 +250,12 @@ def main():
         accs["Train Accuracy"] = accuracy
         #plot the accuracies
         visualizer.plot_accuracy(epoch,1,accs)
+        prec_dict["Macro Precision val"] = macro_val
+        prec_dict["Micro Precision val"] = micro_val
+        prec_dict["Micro Precision train"] = micro_tr
+        prec_dict["Macro Precision train"] = macro_tr
+        visualizer.plot_precision(epoch, 1, prec_dict)
+
         # model.update_learning_rate()  # update learning rates at the end of every epoch.
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
         model.save_network(epoch)
