@@ -76,8 +76,9 @@ def show_features(model, dataloader_tr, dataloader_te):
 
 
 #path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\5_net_Style_Encoder.pth'
-path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth'
+#path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth'
 #path="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs256\\bast_accuracy_val82.34375_net_Style_Encoder.pth"
+path = "C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\\checkpoints\\demo_paper_res18_affine_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val82.890625_net_Style_Encoder.pth"
 #pretrain = torch.load()
 opt = TrainOptions().parse()
 print(opt)

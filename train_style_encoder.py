@@ -254,10 +254,10 @@ def main():
         accs["Train Accuracy"] = accuracy
         #plot the accuracies
         visualizer.plot_accuracy(epoch,0,accs)
-        prec_dict["Macro Precision val"] = macro_val
-        prec_dict["Micro Precision val"] = micro_val
-        prec_dict["Micro Precision train"] = micro_tr
-        prec_dict["Macro Precision train"] = macro_tr
+        prec_dict["Val Macro Precision"] = macro_val
+        prec_dict["Val Micro Precision"] = micro_val
+        prec_dict["Train Micro Precision"] = micro_tr
+        prec_dict["Train Macro Precision"] = macro_tr
         visualizer.plot_precision(epoch, 0, prec_dict)
 
         # model.update_learning_rate()  # update learning rates at the end of every epoch.

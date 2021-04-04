@@ -282,6 +282,12 @@ class Visualizer():
                 win=self.display_id+0x4141)
         except VisdomExceptionBase:
             self.create_visdom_connections()
+        message = '(epoch: %d, val accuracy %.5f , train accuracy %.5f) ' % (epoch, list(accs.values())[0],
+                                                                                 list(accs.values())[1])
+
+        print(message)  # print the message
+        with open(self.log_name, "a") as log_file:
+            log_file.write('%s\n' % message)  # save the message
     def plot_precision(self,epoch, counter_ratio,macro):
         if not hasattr(self, 'plot_macro'):
             self.plot_macro = {'X': [], 'Y': [], 'legend': list(macro.keys())}
@@ -296,7 +302,7 @@ class Visualizer():
                 'xlabel': 'epoch',
                 'ylabel': 'Precision'},
             win='macro_window')
-        message = '(epoch: %d, macro precision %.7f , macro precision %.7f) ' % (epoch,list(macro.values())[0],
+        message = '(epoch: %d, macro precision %.7f , micro precision %.7f) ' % (epoch,list(macro.values())[0],
                                                                                  list(macro.values())[1])
 
         print(message)  # print the message
