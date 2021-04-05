@@ -3,7 +3,7 @@ import contextlib
 from torch import nn
 import torch
 from torch.cuda.amp import GradScaler, autocast
-from torchvision.models import vgg19_bn
+from torchvision.models import vgg19_bn, resnet101
 from torchvision.models import vgg16
 from torchvision.models import resnet18, resnet50
 # import dominate
@@ -131,13 +131,16 @@ class StyleEncoder(nn.Module):
 
         if name=="vgg":
             vgg19 =vgg19_bn(pretrained=True)
+            #index_freeze=index_freeze
         elif name=="resnet":
             vgg19 = resnet18(pretrained=True)
+            #overwrite
+            #index_freeze=4
         vgg19=vgg19.to(self.device)# ##.to("cpu")  # .eval()
         #print(vgg19.modules)
         self.vgg = vgg19
         if path == "":
-            freeze_network(self.vgg, 4,name=name)
+            #freeze_network(self.vgg, index_freeze,name=name)
             replace_head(self.vgg, self.n_labels, name=name)
         else:
             replace_head(self.vgg, self.n_labels, name=name)
@@ -197,6 +200,8 @@ def freeze_network(net, index=None,name="vgg"):
         elif name=="resnet":
             #               0, 1   2 ,  3       4       5       6       7       8   9
             #strcutre is conv1,bn1,relu,maxpool,layer1,layer2,layer3,layer4,avgpool,fc
+
+            #resnet101
             for layer in list(net.children())[:7]:
                 print(layer)
                 for param in layer.parameters():
