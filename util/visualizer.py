@@ -314,9 +314,25 @@ class Visualizer():
         image_result_numpy = util.tensor2im(result_tensor)
         image_style_numpy = util.tensor2im(style_tensor)
         try:
-            self.vis.image(image_result_numpy.transpose([2, 0, 1]), opts=dict(title=f'result of style with {word}'),
+            self.vis.image(image_result_numpy.transpose([2, 0, 1]), opts=dict(title=f'result of style {writer} with {word}'),
                            win='result_style_window')
             self.vis.image(image_style_numpy.transpose([2, 0, 1]), opts=dict(title=f'style of {writer}'),
                            win='style_style_window')
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
+
+    def plot_word(self, word_tensor, word):
+        image_result_numpy = util.tensor2im(word_tensor)
+        try:
+            self.vis.image(image_result_numpy.transpose([2, 0, 1]), opts=dict(title=f'{word}'),
+                           win='word_window')
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
+
+    def plot_image(self, tensor_image, title):
+        image_result_numpy = util.tensor2im(tensor_image)
+        try:
+            self.vis.image(image_result_numpy.transpose([2, 0, 1]), opts=dict(title=title),
+                           win='some_image')
         except VisdomExceptionBase:
             self.create_visdom_connections()

@@ -240,6 +240,7 @@ def tensor2im(input_image, imtype=np.uint8):
         if image_numpy.shape[0] == 1:  # grayscale to RGB
             image_numpy = np.tile(image_numpy, (3, 1, 1))
         image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0  # post-processing: tranpose and scaling
+        # image_numpy = (np.transpose(image_numpy, (1, 2, 0)))
     else:  # if it is a numpy array, do nothing
         image_numpy = input_image
     return image_numpy.astype(imtype)
@@ -327,11 +328,11 @@ def binary_to_dict(binary_dict):
     d = json.loads(jsn)
     return d
 # written by Yehonatan Harmatz
-def concat_images(tf_arr, normalized=False):
+def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 
-    max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
-    max_y = 224
+    # max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
+    max_y = result_w
     # max_x = max_x + (max_x % 2)
     # max_y = max_y + (max_y % 2)
     # pad_tf = [F.pad(input=tf,
@@ -343,8 +344,8 @@ def concat_images(tf_arr, normalized=False):
                     mode='constant', value=pad_val) for tf in tf_arr]
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
-    tf = torch.cat(pad_tf, 1)
+    tf = torch.cat(pad_tf, dim)
     tf = F.pad(input=tf,
-                    pad=[0, 0, 0, (224 - tf.shape[1])],
+                    pad=[0, 0, 0, (max(result_h, tf.shape[1]) - tf.shape[1])],
                     mode='constant', value=pad_val)
     return tf

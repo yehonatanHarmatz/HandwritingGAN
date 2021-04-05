@@ -237,7 +237,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'all'  # tr/te/val/all
+    mode = 'gan_test'  # tr/te/val/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:

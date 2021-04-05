@@ -79,7 +79,8 @@ class BaseOptions():
                             help='if specified, do crop the images for data augmentation')
         parser.add_argument('--test', default=False, action='store_true',
                             help='if specified, sets test :)')
-
+        parser.add_argument('--min_load', default=False, action='store_true',
+                            help='if specified, sets test :)')
 
 
 
