@@ -164,9 +164,9 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
         os.makedirs(outputPath)
     else:
         os.makedirs(outputPath)
-    a = 0.6 if mode in ['val', 'test'] else 3
+    a = 0.6 if mode in ['val', 'test'] else 2
     if k==1:
-        a= 0.4 if mode in ['val', 'test'] else 1
+        a = 0.4 if mode in ['val', 'test'] else 0.8
     env = lmdb.open(outputPath, map_size=int(a*1073741824/2))
     cache = {}
     nSamples = 0
