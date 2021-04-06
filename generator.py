@@ -101,7 +101,8 @@ class OurGenerator:
             for res in range(bs):
                 ones_img[:, :, :, 0:result_tensor.shape[3]] = result_tensor[res, :, :, 0:ones_img.shape[3]]
                 r = ones_img.squeeze()
-                img_pil = transforms.ToPILImage()(r).convert('L')
+                img_pil = transforms.ToPILImage()(r)#.convert('L')
+                img_pil.show()
                 if for_fid:
                     im = fix_image(img_pil)
                 else:
@@ -151,7 +152,10 @@ opt = TrainOptions().parse()
 opt.device = 'cuda'
 #g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
 g = load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final3cont_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\4_net_G.pth', opt)
+#g=load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\latest_net_G.pth', opt)
 #path_s = ".\\checkpoints\\final_models\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+
+#path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
 path_s =r"C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\bast_accuracy_val94.84375_net_Style_Encoder.pth"
 s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s, device=opt.device).to(opt.device)
 w = strLabelConverter(opt.alphabet)
