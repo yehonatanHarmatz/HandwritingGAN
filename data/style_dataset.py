@@ -29,7 +29,7 @@ class StyleDataset(BaseDataset):
         BaseDataset.__init__(self, opt)
 
         self.k = opt.k
-
+        self.min_load = opt.min_load
         self.env = lmdb.open(
             os.path.abspath(opt.dataroot),
             max_readers=1,
@@ -62,6 +62,7 @@ class StyleDataset(BaseDataset):
                 self.nAugSamples = nSamples
 
         self.transform = get_transform(opt)
+        self.transform_org = get_transform(opt, grayscale=(opt.input_nc == 1))
         self.target_transform = target_transform
         # if opt.collate:
         #     self.collate_fn = TextCollator(opt)
@@ -89,31 +90,36 @@ class StyleDataset(BaseDataset):
             style = np.load(io.BytesIO(a))
             imgs = []
             org_size = []
-            for imgbuf in style:
+            for imgbuf in style[:self.k]:
                 buf = six.BytesIO()
                 buf.write(imgbuf)
                 buf.seek(0)
                 try:
                     im = Image.open(buf)
-                    im2 = im
+                    if not self.min_load:
+                        im2 = im
                     im = im.resize((im.size[0], 224//self.k))
                 except IOError:
                     print('Corrupted image for %d' % index)
                     return self[index + 1]
                 img = ToTensor()(im).to(self.device)
-                img2 = ToTensor()(im2).to(self.device)
+                if not self.min_load:
+                    img2 = ToTensor()(im2).to(self.device)
+                    org_size.append(img2)
+                    imgs_tensor_org = concat_images(org_size, normalized=('Normalize' in str(self.transform)),
+                                                    result_h=sum(org.shape[1] for org in org_size))
+
                 imgs.append(img)
-                org_size.append(img2)
             # print([image for image in imgs])
             # imgs_tensor = torch.nn.utils.rnn.pad_sequence([torch.tensor(image) for image in imgs], batch_first=True)
             # imgs_tensor = concat_images([torch.flatten(image, 0, 1) for image in imgs])
             imgs_tensor = concat_images(imgs, normalized=('Normalize' in str(self.transform)))
-            imgs_tensor_org = concat_images(org_size, normalized=('Normalize' in str(self.transform)))
             if self.transform is not None:
                 img_pil=torchvision.transforms.ToPILImage()(imgs_tensor)
-                img_pil_org=torchvision.transforms.ToPILImage()(imgs_tensor_org)
                 imgs_tensor = self.transform(img_pil).to(self.device)
-                imgs_tensor_org = self.transform(img_pil_org).to(self.device)
+                if not self.min_load:
+                    img_pil_org=torchvision.transforms.ToPILImage()(imgs_tensor_org).convert('L')
+                    imgs_tensor_org = self.transform_org(img_pil_org).to(self.device)
                 #print(self.transform)
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
@@ -121,7 +127,10 @@ class StyleDataset(BaseDataset):
             # img.show()
             # imgs_tensor = ToTensor()(im).to(self.device)
             # imgs_tensor = torchvision.transforms.Normalize([0,0,0], [1,1,1], inplace=False)(imgs_tensor)
-            item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index, 'original':imgs_tensor_org}
+            if not self.min_load:
+                item = {'style': imgs_tensor, 'imgs_path': style_key, 'idx':index, 'original':imgs_tensor_org}
+            else:
+                item = {'style': imgs_tensor}
             # im = tensor2im(imgs_tensor.unsqueeze(0))
             # img = Image.fromarray(im, 'RGB')
             # img.save('my.png')
@@ -133,9 +142,10 @@ class StyleDataset(BaseDataset):
                 if self.target_transform is not None:
                     label = self.target_transform(label)
                 item['label'] = label
-                words_key = 'words-%09d' % index
-                words = np.load(io.BytesIO(txn.get(words_key.encode('utf-8'))))
-                item['words'] = str(words)
+                if not self.min_load:
+                    words_key = 'words-%09d' % index
+                    words = np.load(io.BytesIO(txn.get(words_key.encode('utf-8'))))
+                    item['words'] = str(list(words))
 
             if hasattr(self,'Z'):
                 z = self.Z[index-1]
