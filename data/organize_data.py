@@ -47,7 +47,7 @@ if __name__ == '__main__':
     # author_number = -1  # use only images of a specific writer. If the value is -1, use all writers, otherwise use the index of this specific writer
     remove_punc = True  # remove images which include only one punctuation mark from the list ['.', '', ',', '"', "'", '(', ')', ':', ';', '!']
     writers_images, _ = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
-    id = '2'
+    id = '1'
     dir_path = os.path.join(top_dir, mode + ' '+ str(pick), id)
     paths_to_move = [labeld_image[0] for writer_list in writers_images.values() for labeld_image in writer_list]
     unpack_partition(dir_path, paths_to_move, pick)
