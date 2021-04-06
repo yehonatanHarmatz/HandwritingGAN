@@ -7,14 +7,7 @@ from data.create_style_dataset import create_writers_dict
 import os
 
 
-def fix_image(imagePath):
-    if not os.path.exists(imagePath):
-        print('%s does not exist' % imagePath)
-        return False
-    try:
-        im = Image.open(imagePath)
-    except:
-        return False
+def fix_image(im):
     # reshape the image to the new dimensions
     # im = im.resize((new_width, new_height))
     # append with 256 to add left, upper and lower white edges
@@ -32,7 +25,14 @@ def unpack_partition(new_dir, paths_list, pick=25000):
         os.makedirs(new_dir)
     new_paths_list = random.sample(paths_list, pick)
     for i, path in enumerate(new_paths_list):
-        im = fix_image(path)
+        if not os.path.exists(path):
+            print('%s does not exist' % path)
+            return False
+        try:
+            im = Image.open(path)
+        except:
+            return False
+        im = fix_image(im)
         im.save(os.path.join(new_dir,str(i)+'.png'))
 
 if __name__ == '__main__':
