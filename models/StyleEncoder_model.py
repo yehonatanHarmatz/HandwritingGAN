@@ -3,6 +3,7 @@ import contextlib
 from torch import nn
 import torch
 from torch.cuda.amp import GradScaler, autocast
+from torch.optim.lr_scheduler import StepLR
 from torchvision.models import vgg19_bn, resnet101
 from torchvision.models import vgg16
 from torchvision.models import resnet18, resnet50
@@ -44,6 +45,7 @@ class StyleEncoder(nn.Module):
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         self.vgg=None
         self.features_only = features_only
+        self.already_trained=already_trained
         if already_trained:
             self.prepare_vgg_extractor(path=path)
         else:
@@ -56,7 +58,8 @@ class StyleEncoder(nn.Module):
         self.mixed=opt.autocast_bit
         if self.mixed:
             self.scaler =opt.scaler
-
+        if not already_trained:
+            self.set_scheduler('step')
         #= opt.scaler =
         #torch.optim.Adam(model.parameters(),
                                           #lr=0.001)
@@ -95,6 +98,7 @@ class StyleEncoder(nn.Module):
             self.scaler.step(self.optimizer)
         else:
             self.optimizer.step()
+
         self.optimizer.zero_grad()
 
     def set_input(self, data):
@@ -140,7 +144,7 @@ class StyleEncoder(nn.Module):
         #print(vgg19.modules)
         self.vgg = vgg19
         if path == "":
-            #freeze_network(self.vgg, index_freeze,name=name)
+            freeze_network(self.vgg, index_freeze,name=name)
             replace_head(self.vgg, self.n_labels, name=name)
         else:
             replace_head(self.vgg, self.n_labels, name=name)
@@ -185,6 +189,31 @@ class StyleEncoder(nn.Module):
         self.vgg.eval()
     def train(self, mode: bool = True):
         self.vgg.train()
+    """For 'linear', we keep the same learning rate for the first <opt.niter> epochs"""
+    def set_scheduler(self,policy):
+        if policy == 'linear':
+            def lambda_rule(epoch):
+                lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.niter) / float(opt.niter_decay + 1)
+                return lr_l
+
+            self.scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
+        # Assuming optimizer uses lr = 0.05 for all groups
+        # lr = 0.05     if epoch < 30
+        # lr = 0.005    if 30 <= epoch < 60
+        # lr = 0.0005   if 60 <= epoch < 90
+        # ...
+        elif policy=='step':
+            self.scheduler = StepLR(self.optimizer, step_size=5, gamma=0.5)
+            #for epoch in range(100):
+                #train(...)
+                #validate(...)
+                #scheduler.step()
+        else:
+            raise Exception("no policy given")
+
+    def scheduler_step(self):
+        if not self.already_trained:
+            self.scheduler.step()
 
 def freeze_network(net, index=None,name="vgg"):
     if index is None:

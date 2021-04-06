@@ -18,7 +18,6 @@ from options.train_options import TrainOptions
 from util.util import prepare_z_y, make_one_hot, concat_images
 from util.visualizer import Visualizer
 
-
 class OurGenerator:
     def __init__(self, g_model, s_extractor, words_encoder, z_dim, opt, visualiser=None):
         self.g_model = g_model
@@ -88,7 +87,8 @@ class OurGenerator:
         y.sample_()
         words = [self.lex[int(i)].encode('utf-8') for i in y]
         style = [style_dataset[k] for k in random.choices(range(style_len), k=bs)]
-        style_tensor = torch.tensor([s['style'] for s in style])
+        style_tensor = torch.cat([s['style'].unsqueeze(0) for s in style],dim=0).to(self.opt.device)
+        #tensors, dim=0, *, out=None)
         style_features = self.s_extractor(style_tensor)
         # word_encode = self.words_encoder.encode(word.encode('utf-8'))
         text_encode_fake, len_text_fake = self.words_encoder.encode(words)
@@ -96,11 +96,11 @@ class OurGenerator:
         text_encode_fake = text_encode_fake.to(self.opt.device)
         if self.opt.one_hot:
             one_hot_fake = make_one_hot(text_encode_fake, len_text_fake, self.opt.n_classes).to(self.opt.device)
-            result_tensor = self.g_model(z, one_hot_fake, style_features.squeeze())
+            result_tensor = self.g_model(z, one_hot_fake, style_features.squeeze().to(self.opt.device))
             ones_img = torch.ones(result_tensor.shape, dtype=torch.float32)
             for res in range(bs):
                 ones_img[:, :, :, 0:result_tensor.shape[3]] = result_tensor[res, :, :, 0:ones_img.shape[3]]
-                r = ones_img
+                r = ones_img.squeeze()
                 img_pil = transforms.ToPILImage()(r).convert('L')
                 if for_fid:
                     im = fix_image(img_pil)
@@ -142,11 +142,30 @@ def load_g(path, opt):
         keys = key.split('.')
         if keys[0] == 'module': keys = keys[1:]
     g.load_state_dict(state_dict)
+    g=g.to(opt.device)
     print(g)
     return g
 
+print("harmatz lets finish this already ssksnm,fgx,mbvcvbcvbtguiu")
+opt = TrainOptions().parse()
+opt.device = 'cuda'
+#g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
+g = load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final3cont_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\4_net_G.pth', opt)
+#path_s = ".\\checkpoints\\final_models\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+path_s =r"C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\bast_accuracy_val94.84375_net_Style_Encoder.pth"
+s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s, device=opt.device).to(opt.device)
+w = strLabelConverter(opt.alphabet)
+#vis = Visualizer(opt)
+gen = OurGenerator(g, s, w, opt.dim_z, opt, None)
 
-
+opt_style_test = TrainOptions().parse()
+opt_style_test.dataname = 'style15IAMcharH32rmPunct_gan'
+opt_style_test.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
+opt_style_test.test = True
+opt_style_test.device = opt.device
+style_test_dataset = StyleDataset(opt_style_test)
+gen.generate_and_save(".\gan_forward",5,style_test_dataset)
+"""
 opt = TrainOptions().parse()
 opt.device = 'cpu'
 g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
@@ -213,7 +232,7 @@ for i in l:
             w_same = w
             same = []
             same.append(words_test_dataset[i])
-
+"""
 '''
 # random.shuffle(l)
 diff = []

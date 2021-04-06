@@ -19,6 +19,8 @@ from torch.nn.utils import clip_grad_norm_
 import random
 import unicodedata
 import sys
+from .DiffAugment_pytorch import DiffAugment
+
 
 activation_dict = {'inplace_relu': nn.ReLU(inplace=True),
                    'relu': nn.ReLU(inplace=False),
@@ -78,7 +80,8 @@ class ScrabbleGANBaseModel(BaseModel):
         self.Dwcriterion=torch.nn.CrossEntropyLoss()
 
         # TODO- add S to self
-        path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+        #path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+        path_s = "C:\\Users\\Ron\PycharmProjects\\HandwritingGANgit\\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val94.84375_net_Style_Encoder.pth"
         #self.style_encoder = StyleEncoder(self.opt,already_trained=True,path=path_s)
         self.style_encoder = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s).to(self.device)
         # won't be trained anymore
@@ -173,6 +176,8 @@ class ScrabbleGANBaseModel(BaseModel):
         self.epsilon = 1e-7
         self.real_z = None
         self.real_z_mean = None
+        # from DiffAugment_tf import DiffAugment
+        self.policy = 'translation'
         from data.style_dataset import StyleDataset
         # if file style exists
         path_style='fixed_style.pt'
@@ -203,7 +208,7 @@ class ScrabbleGANBaseModel(BaseModel):
             else:
                 images = self.netG(self.fixed_noise, self.fixed_text_encode_fake.to(self.device),fixed_style)
 
-            loss_G = loss_hinge_gen(self.netD(**{'x': images, 'z': self.fixed_noise,'s':self.input_features}), self.fixed_text_len.detach(), self.opt.mask_loss)
+            loss_G = loss_hinge_gen(self.netD(**{'x': DiffAugment(images, policy=self.policy), 'z': self.fixed_noise,'s':self.input_features}), self.fixed_text_len.detach(), self.opt.mask_loss)
             # self.loss_G = loss_hinge_gen(self.netD(self.fake, self.rep_label_fake))
             # OCR loss on real data
             pred_fake_OCR = self.netOCR(images)
@@ -395,12 +400,12 @@ class ScrabbleGANBaseModel(BaseModel):
         # ,'s':self.input_features
         with autocast() if self.autocast_bit else contextlib.nullcontext():
             if self.real_z_mean is None:
-                pred_real = self.netD(self.real.detach())
+                pred_real = self.netD(DiffAugment(self.real.detach(), policy=self.policy))
             else:
-                pred_real = self.netD(**{'x': self.real.detach(), 'z': self.real_z_mean.detach()})
+                pred_real = self.netD(**{'x': DiffAugment(self.real.detach(), policy=self.policy), 'z': self.real_z_mean.detach()})
             # Fake
             try:
-                pred_fake = self.netD(**{'x': self.fake.detach(), 'z': self.z.detach()})
+                pred_fake = self.netD(**{'x': DiffAugment(self.fake.detach(), policy=self.policy), 'z': self.z.detach()})
             except:
                 print('a')
             # Combined loss
@@ -478,7 +483,7 @@ class ScrabbleGANBaseModel(BaseModel):
             scale = lambda x: x
             factor_scale = 1#scale
         with autocast() if self.autocast_bit else contextlib.nullcontext():
-            self.loss_G = loss_hinge_gen(self.netD(**{'x': self.fake, 'z': self.z,'s':self.input_features}), self.len_text_fake.detach(), self.opt.mask_loss)
+            self.loss_G = loss_hinge_gen(self.netD(**{'x': DiffAugment(self.fake, policy=self.policy), 'z': self.z,'s':self.input_features}), self.len_text_fake.detach(), self.opt.mask_loss)
             # OCR loss on real data
 
             pred_fake_OCR = self.netOCR(self.fake)
