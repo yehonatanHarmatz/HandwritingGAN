@@ -91,7 +91,7 @@ class TextDataset(BaseDataset):
             try:
                 img = Image.open(buf).convert('L')
             except IOError:
-                print('Corrupted image for %d' % index)
+                #print('Corrupted image for %d' % index)
                 return self[index + 1]
 
             if self.transform is not None:

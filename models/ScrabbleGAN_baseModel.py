@@ -423,10 +423,13 @@ class ScrabbleGANBaseModel(BaseModel):
             self.loss_Dw_real = self.Dwcriterion(preds,self.writer_label_real)
             # total loss
 
-            loss_total = self.loss_D + self.loss_OCR_real + self.loss_Dw_real
+            #loss_total = self.loss_D + self.loss_OCR_real + self.loss_Dw_real
 
         # backward
-        scale(loss_total).backward()
+        #scale(loss_total).backward()
+        scale(self.loss_D).backward()
+        scale(self.loss_OCR_real).backward()
+        scale(self.loss_Dw_real).backward()
         for param in self.netOCR.parameters():
             param.grad[param.grad!=param.grad]=0
             param.grad[torch.isnan(param.grad)]=0
@@ -436,7 +439,7 @@ class ScrabbleGANBaseModel(BaseModel):
              clip_grad_norm_(self.netD.parameters(), self.opt.clip_grad)
 
 
-        return loss_total
+        return self.loss_D + self.loss_OCR_real + self.loss_Dw_real
 
 
     """def backward_OCR(self):
@@ -555,6 +558,7 @@ class ScrabbleGANBaseModel(BaseModel):
             self.forward()
             self.set_requires_grad([self.netD], True)
             self.set_requires_grad([self.netOCR], True)
+            self.set_requires_grad([self.netDw], True)
         self.optimizer_D.zero_grad()
         if self.opt.OCR_init in ['glorot', 'xavier', 'ortho', 'N02']:
             self.optimizer_OCR.zero_grad()
@@ -605,11 +609,13 @@ class ScrabbleGANBaseModel(BaseModel):
                 self.forward()
                 self.set_requires_grad([self.netD], False)
                 self.set_requires_grad([self.netOCR], False)
+                self.set_requires_grad([self.netDw], False)
             self.backward_G()
         else:
             self.forward()
             self.set_requires_grad([self.netD], False)
             self.set_requires_grad([self.netOCR], False)
+            self.set_requires_grad([self.netDw], False)
             self.backward_G()
 
     def optimize_G_step(self):

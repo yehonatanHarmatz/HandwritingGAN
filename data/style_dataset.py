@@ -92,8 +92,9 @@ class StyleDataset(BaseDataset):
             style = np.load(io.BytesIO(a))
             imgs = []
             org_size = []
-            random.shuffle(style)
-            for imgbuf in style[:self.k]:
+            #random.shuffle(style)
+            #[:self.k]
+            for imgbuf in style:
                 buf = six.BytesIO()
                 buf.write(imgbuf)
                 buf.seek(0)
@@ -103,7 +104,7 @@ class StyleDataset(BaseDataset):
                         im2 = im
                     im = im.resize((im.size[0], 224//self.k))
                 except IOError:
-                    print('Corrupted image for %d' % index)
+                    #print('Corrupted image for %d' % index)
                     return self[index + 1]
                 img = ToTensor()(im).to(self.device)
                 if not self.min_load:
