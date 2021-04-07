@@ -17,14 +17,34 @@ def fix_image(im):
     im = new_im
     return im
 
+def resize_im(im, label, resize='charResize', imgH=32, h_gap=0, charminW=16, charmaxW=17, discard_wide=True, discard_narr=True):
+    if resize in ['charResize', 'keepRatio']:
+        width, height = im.size
+        new_height = imgH - (h_gap * 2)
+        len_word = len(label)
+        width = int(width * imgH / height)
+        new_width = width
+        if resize == 'charResize':
+            if (width / len_word > (charmaxW - 1)) or (width / len_word < charminW):
+                if discard_wide and width / len_word > 3 * ((charmaxW - 1)):
+                    return False
+                if discard_narr and (width / len_word) < (charminW / 3):
+                    return False
+                else:
+                    new_width = len_word * random.randrange(charminW, charmaxW)
+        # reshape the image to the new dimensions
+        im = im.resize((new_width, new_height))
+        return im
+
 def unpack_partition(new_dir, paths_list, pick=25000):
     if os.path.exists(new_dir):
         shutil.rmtree(new_dir)
         os.makedirs(new_dir)
     else:
         os.makedirs(new_dir)
-    new_paths_list = random.sample(paths_list, pick)
-    for i, path in enumerate(new_paths_list):
+    c = 0
+    random.shuffle(paths_list)
+    for i, (path, label) in enumerate(paths_list):
         if not os.path.exists(path):
             print('%s does not exist' % path)
             return False
@@ -32,8 +52,13 @@ def unpack_partition(new_dir, paths_list, pick=25000):
             im = Image.open(path)
         except:
             return False
-        im = fix_image(im)
-        im.save(os.path.join(new_dir,str(i)+'.png'))
+        im = resize_im(im, label)
+        if im:
+            im = fix_image(im)
+            im.save(os.path.join(new_dir,str(i)+'.png'))
+            c += 1
+            if c == pick:
+                return
 
 if __name__ == '__main__':
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
@@ -49,5 +74,5 @@ if __name__ == '__main__':
     writers_images, _ = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
     id = '1'
     dir_path = os.path.join(top_dir, mode + ' '+ str(pick), id)
-    paths_to_move = [labeld_image[0] for writer_list in writers_images.values() for labeld_image in writer_list]
+    paths_to_move = [labeld_image for writer_list in writers_images.values() for labeld_image in writer_list]
     unpack_partition(dir_path, paths_to_move, pick)

@@ -1,5 +1,7 @@
 import io
 import os
+import random
+
 import six
 import sys
 import ast
@@ -90,6 +92,7 @@ class StyleDataset(BaseDataset):
             style = np.load(io.BytesIO(a))
             imgs = []
             org_size = []
+            random.shuffle(style)
             for imgbuf in style[:self.k]:
                 buf = six.BytesIO()
                 buf.write(imgbuf)
