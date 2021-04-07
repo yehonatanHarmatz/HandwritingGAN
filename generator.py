@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from torchvision.transforms import transforms
+from tqdm import tqdm
 
 from data import dataset_catalog
 from data.organize_data import fix_image
@@ -59,7 +60,7 @@ class OurGenerator:
         text_encode_fake, len_text_fake = self.words_encoder.encode([word.encode('utf-8')])
         # convert to device
         text_encode_fake = text_encode_fake.to(self.opt.device)
-        z, _ = prepare_z_y(1, self.z_dim, 1, device=opt.device, seed=random.randint(0, 200000000))
+        z, _ = prepare_z_y(1, self.z_dim, 1, device=opt.device)
         z.sample_()
         if self.opt.one_hot:
             one_hot_fake = make_one_hot(text_encode_fake, len_text_fake, self.opt.n_classes).to(
@@ -83,7 +84,7 @@ class OurGenerator:
 
     def gen_one_batch(self, path_to_save, style_dataset, bs, c, for_fid):
         style_len = len(style_dataset)
-        z, y = prepare_z_y(bs, self.z_dim, len(self.lex), device=opt.device, seed=random.randint(0, 200000000))
+        z, y = prepare_z_y(bs, self.z_dim, len(self.lex), device=opt.device, seed=random.randint(0, 20000000))
         z.sample_()
         y.sample_()
         words = [self.lex[int(i)].encode('utf-8') for i in y]
@@ -122,12 +123,12 @@ class OurGenerator:
             os.makedirs(path_to_save)
         # style_len = len(style_dataset)
         c = 0
-        for i in range(amount//bs):
+        for i in tqdm(range(amount//bs)):
             c = self.gen_one_batch(path_to_save, style_dataset, bs, c, for_fid)
         new_bs = amount - c
         if new_bs > 0:
             c = self.gen_one_batch(path_to_save, style_dataset, new_bs, c, for_fid)
-        print('generated and saved ' + str(c) + ' images')
+        print('generated and saved ' + str(c) + 'images')
                     # result_tensor = ones_img
 
 
@@ -136,7 +137,7 @@ class OurGenerator:
 def load_g(path, opt):
     opt.n_classes = len(opt.alphabet)
     g = Generator(**vars(opt))
-    state_dict = torch.load(path, map_location=str('cpu'))
+    state_dict = torch.load(path, map_location=str(opt.device))
     # g = torch.load(path, map_location=str('cpu'))
     # return g
     # patch InstanceNorm checkpoints prior to 0.4
@@ -148,16 +149,17 @@ def load_g(path, opt):
     g=g.to(opt.device)
     print(g)
     return g
-
+torch.set_num_threads(1)
 print("harmatz lets finish this already ssksnm,fgx,mbvcvbcvbtguiu")
 opt = TrainOptions().parse()
-g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
-# g = load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final3cont_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\4_net_G.pth', opt)
-#g=load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\latest_net_G.pth', opt)
-path_s = ".\\checkpoints\\final_models\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+opt.device = 'cuda'
+#g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
+g = load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final3cont_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\4_net_G.pth', opt)
+path_s =r"C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\bast_accuracy_val94.84375_net_Style_Encoder.pth"
 
-# path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
-# path_s =r"C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\bast_accuracy_val94.84375_net_Style_Encoder.pth"
+#path_s = ".\\checkpoints\\final_models\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+#g=load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\latest_net_G.pth', opt)
+#path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
 s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s, device=opt.device).to(opt.device)
 w = strLabelConverter(opt.alphabet)
 #vis = Visualizer(opt)
@@ -169,7 +171,8 @@ opt_style_test.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
 opt_style_test.test = True
 opt_style_test.device = opt.device
 style_test_dataset = StyleDataset(opt_style_test)
-gen.generate_and_save(".\gan_forward",5,style_test_dataset)
+gen.generate_and_save(".\gan_forward_new2",10000,style_test_dataset)
+#exit(1)
 """
 opt = TrainOptions().parse()
 opt.device = 'cpu'
