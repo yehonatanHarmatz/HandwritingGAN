@@ -61,9 +61,9 @@ def show_features(model, dataloader_tr, dataloader_te):
     tsne = TSNE(n_components=2)
 
     # 1.1 Extract train features
-    train_features, train_labels = extract_features_and_labels(model, dataloader_tr)
-    train_tsne = tsne.fit_transform(train_features)
-    plot_data(train_tsne, train_labels)
+    #train_features, train_labels = extract_features_and_labels(model, dataloader_tr)
+    #train_tsne = tsne.fit_transform(train_features)
+    #plot_data(train_tsne, train_labels)
 
     # 1.2 Extract test features
     test_features, test_labels = extract_features_and_labels(model, dataloader_te)
@@ -74,7 +74,7 @@ def show_features(model, dataloader_tr, dataloader_te):
 
 
 
-
+torch.set_num_threads(1)
 #path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\5_net_Style_Encoder.pth'
 #path='C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth'
 #path="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs256\\bast_accuracy_val82.34375_net_Style_Encoder.pth"
@@ -92,7 +92,7 @@ opt.test=True
 tr_dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
 tr_dataset_size = len(tr_dataset)
 print(tr_dataset_size)
-opt.dataname += "_val"
+opt.dataname += "_te"
 opt.dataroot = dataset_catalog.datasets[opt.dataname]
 opt.scaler = GradScaler()
 opt.test=True

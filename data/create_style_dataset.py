@@ -237,7 +237,7 @@ def create_dataset(writer_to_images_dict, outputPath, mode, k, remove_punc, resi
 
 def main():
     dataset = 'IAM'  # CVL/IAM/RIMES/gw
-    mode = 'gan_test'  # tr/te/val/all
+    mode = 'te'  # tr/te/val/all
     labeled = True
     top_dir = 'Datasets'
     # parameter relevant for IAM/RIMES:
@@ -257,7 +257,7 @@ def main():
     h_gap = 0  # Insert a gap below and above the text
     discard_wide = True  # Discard images which have a character width 3 times larger than the maximum allowed character size (instead of resizing them) - this helps discard outlier images
     discard_narr = True  #   Discard images which have a character width 3 times smaller than the minimum allowed charcter size.
-    k = 1  # the number of images in any unit of the dataset
+    k = 15  # the number of images in any unit of the dataset
     writers_images, outputPath = create_writers_dict(top_dir, dataset, mode, words, remove_punc)
 
     # writers_tr = list(map(int, list(writers_images.keys())))

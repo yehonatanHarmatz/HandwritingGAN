@@ -327,8 +327,13 @@ def binary_to_dict(binary_dict):
     jsn = binary_dict.decode('utf-8')
     d = json.loads(jsn)
     return d
+
+def get_common(tensor):
+    column=tensor[0,:,tensor.shape[2]-1].cpu().detach().numpy()
+    from collections import Counter
+    return Counter(column).most_common(1)[0][0]
 # written by Yehonatan Harmatz
-def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1):
+def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1,width_list=None):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 
     # max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
@@ -339,11 +344,19 @@ def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1):
     #                 pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
     #                 mode='constant', value=0) for tf in tf_arr]
     pad_val = 1 if normalized else 256
-    pad_tf = [F.pad(input=tf,
-                    pad=[0, (max_y - tf.shape[2])],
-                    mode='constant', value=pad_val) for tf in tf_arr]
+    if width_list is None:
+        pad_tf = [F.pad(input=tf,
+                        pad=[0, (max_y - tf.shape[2])],
+                        mode='constant', value=pad_val) for tf in tf_arr]
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
+
+    else:
+        pad_list=[get_common(tf) for tf in tf_arr]
+
+        pad_tf = [F.pad(input=tf,
+                        pad=[0, (width_list[i] - tf.shape[2])],
+                        mode='constant', value=pad_list[i]) for i,tf in enumerate(tf_arr)]
     tf = torch.cat(pad_tf, dim)
     tf = F.pad(input=tf,
                     pad=[0, 0, 0, (max(result_h, tf.shape[1]) - tf.shape[1])],
