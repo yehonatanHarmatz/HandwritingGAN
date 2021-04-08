@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import json
+import random
 
 import torch
 import numpy as np
@@ -328,10 +329,100 @@ def binary_to_dict(binary_dict):
     d = json.loads(jsn)
     return d
 
+
 def get_common(tensor):
     column=tensor[0,:,tensor.shape[2]-1].cpu().detach().numpy()
     from collections import Counter
     return Counter(column).most_common(1)[0][0]
+
+def get_gradual(first_val, end_val, length):
+    arr = list(np.arange(first_val, (end_val+(end_val-first_val)/length), (end_val-first_val)/length))
+    while len(arr) < length:
+        arr.append(end_val)
+    if len(arr) > length:
+        m = length-len(arr)
+        for i in range(m):
+            arr = arr[:len(arr)//2] + arr[len(arr)//2+1:]
+    return arr
+
+def handle_dark(column, start, end, default_val):
+    if start == end:
+        return
+    if start > 2 and end < len(column)-3:
+        arr = get_gradual(torch.mean(column[start-3:start]), torch.mean(column[end+1:end+4]), end-start+1)
+        for c, i in enumerate(range(start, end+1)):
+            column[i] = float(arr[c]) + random.uniform(-0.005,0.005)
+    elif start < 2 and end < len(column)-3:
+        arr = get_gradual(default_val, torch.mean(column[end + 1:end + 4]), end - start + 1)
+        for c, i in enumerate(range(start, end + 1)):
+            column[i] = float(arr[c]) + random.uniform(-0.005,0.005)
+    elif start > 2:
+        arr = get_gradual(torch.mean(column[start-3:start]), default_val, end - start + 1)
+        for c, i in enumerate(range(start, end + 1)):
+            column[i] = float(arr[c]) + random.uniform(-0.005,0.005)
+    else:
+        for i in range(start, end + 1):
+            column[i] = 0.9 + random.uniform(-0.005,0.005)
+
+def fix_column(column, coloumn_before):
+    column_np = column.cpu().detach().numpy()
+    start = -1
+    end = -1
+    default_val = torch.mean(coloumn_before)
+    for i in range(len(column_np)):
+        if column[i] < 0.85:
+            if start != -1:
+                end = i
+            else:
+                start = i
+                end = i
+        elif start != -1:
+            handle_dark(column, start, end, default_val)
+            start = end = -1
+            v = torch.mean(column[i - 10:i]) if i > 10 else torch.mean(column[i - 5:i]) if i > 5 else torch.mean(
+                column[:i])
+            # column[i] = float(v) + random.uniform(-0.05,0.05)
+    if start != -1:
+        handle_dark(column, start, end, default_val)
+
+def expend_tensor(tensor, width):
+    if width == tensor.shape[2]:
+        return tensor
+    new_tf = F.pad(input=tensor,
+                        pad=[0, (width - tensor.shape[2])],
+                        mode='constant', value=1)
+    column = tensor[0,:,tensor.shape[2]-1].cpu().detach()
+    column_np = column.numpy()
+    start = -1
+    end = -1
+    default_val = get_common(tensor)
+    for i in range(len(column_np)):
+        if column[i] < 0.85:
+            if start != -1:
+                end = i
+            else:
+                start = i
+                end = i
+        elif start != -1:
+            handle_dark(column, start, end, default_val)
+            start = end = -1
+            v = torch.mean(column[i-10:i]) if i > 10 else torch.mean(column[i-5:i]) if i > 5 else torch.mean(column[:i])
+            # column[i] = float(v) + random.uniform(-0.05,0.05)
+    if start != -1:
+        handle_dark(column, start, end, default_val)
+    l = [column]*(width-tensor.shape[2])
+    for i, c in enumerate(l):
+        temp = c + (torch.rand(c.shape) - 0.5)/12.5
+        for j in range(len(temp)):
+            temp[j] = min(1, temp[j])
+        l[i] = temp.unsqueeze(0).unsqueeze(2)
+    pad = torch.cat(l,dim=2)
+    new_tf[0,:,tensor.shape[2]:] = pad[0,:,:]
+    return new_tf
+
+
+
+
 # written by Yehonatan Harmatz
 def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1,width_list=None):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
@@ -352,11 +443,14 @@ def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1,wid
     #     print(pad_tf[i].shape)
 
     else:
+        pad_tf = [expend_tensor(tf, width_list[i]) for i, tf in enumerate(tf_arr)]
+        '''
         pad_list=[get_common(tf) for tf in tf_arr]
 
         pad_tf = [F.pad(input=tf,
                         pad=[0, (width_list[i] - tf.shape[2])],
                         mode='constant', value=pad_list[i]) for i,tf in enumerate(tf_arr)]
+        '''
     tf = torch.cat(pad_tf, dim)
     tf = F.pad(input=tf,
                     pad=[0, 0, 0, (max(result_h, tf.shape[1]) - tf.shape[1])],
