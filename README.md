@@ -1,4 +1,4 @@
-# ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation
+# ScrabbleStyleGAN: Semi-Supervised Varying Length Varying Style Handwritten Text Generation
 this repo was initiality copied from "ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation"
 ![](imgs/arch_superkali.gif)
 
