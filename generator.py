@@ -60,7 +60,7 @@ class OurGenerator:
         text_encode_fake, len_text_fake = self.words_encoder.encode([word.encode('utf-8')])
         # convert to device
         text_encode_fake = text_encode_fake.to(self.opt.device)
-        z, _ = prepare_z_y(1, self.z_dim, 1, device=opt.device)
+        z, _ = prepare_z_y(1, self.z_dim, 1, device=self.opt.device)
         z.sample_()
         if self.opt.one_hot:
             one_hot_fake = make_one_hot(text_encode_fake, len_text_fake, self.opt.n_classes).to(
@@ -84,7 +84,7 @@ class OurGenerator:
 
     def gen_one_batch(self, path_to_save, style_dataset, bs, c, for_fid):
         style_len = len(style_dataset)
-        z, y = prepare_z_y(bs, self.z_dim, len(self.lex), device=opt.device, seed=random.randint(0, 20000000))
+        z, y = prepare_z_y(bs, self.z_dim, len(self.lex), device=self.opt.device, seed=random.randint(0, 20000000))
         z.sample_()
         y.sample_()
         words = [self.lex[int(i)].encode('utf-8') for i in y]
@@ -152,56 +152,200 @@ def load_g(path, opt):
     print(g)
     return g
 
+def gen_multi_style(gen, word, style_list, s_list_1):
+    # res = [gen.generate_word_image(s, word).squeeze(1) for s in style_list]
+    res = [generate_single_sentence(gen, word.split(), s).squeeze(1) for s in style_list]
+    res = concat_images(res, result_h=(sum(res1.shape[1] for res1 in res)))
+    s_res = [s_1['original'] for s_1 in s_list_1]
+    s_res = concat_images(s_res, result_h=(sum(res1.shape[1] for res1 in s_res)))
+    width_list = [s_res.shape[2] + 15]
+    width_list.append(res.shape[2])
+    image = concat_images([s_res, res], result_h=max(res1.shape[1] for res1 in res),result_w=(res.shape[2]+s_res.shape[2]), width_list=width_list, sentence=False, dim=2)
+    gen.plot_image(image.unsqueeze(0), 'indexes: ' +str([s['idx'] for s in style_list]))
 
-torch.set_num_threads(1)
-print("harmatz lets finish this already ssksnm,fgx,mbvcvbcvbtguiu")
-opt = TrainOptions().parse()
-opt.device = 'cuda'
-#g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
-#path_s = ".\\checkpoints\\final_models\\bast_accuracy_val94.84375_net_Style_Encoder.pth"
+def generate_single_sentence(gen, words, style):
+    res = [gen.generate_word_image(style, word).squeeze(1)
+           for word in words]
+    width_list = [word.shape[2] + 15 for word in res][:-1]
+    width_list.append(res[-1].shape[2])
+    res_tensor = concat_images(res, result_h=max(res1.shape[1] for res1 in res), width_list=width_list, sentence=True, dim=2)
+    return res_tensor
 
-g = load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final3cont_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\4_net_G.pth', opt)
-path_s =r"C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\bast_accuracy_val94.84375_net_Style_Encoder.pth"
+def generate_sentence(gen, style_test_dataset, words):
+    #for i in range(0, len(style_test_dataset), 1):
 
-#g=load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\latest_net_G.pth', opt)
-#path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
-s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s, device=opt.device).to(opt.device)
-w = strLabelConverter(opt.alphabet)
-vis = Visualizer(opt)
-gen = OurGenerator(g, s, w, opt.dim_z, opt, vis)
+    #word = random.choice(words_test_dataset)['label'].decode('utf-8')
+    for i in range(0,len(style_test_dataset),10):
+        res = [gen.generate_word_image(style_test_dataset[i], word).squeeze(1)
+               for word in words]
+        width_list = [word.shape[2]+15 for word in res][:-1]
+        width_list.append(res[-1].shape[2])
+        res_tensor = concat_images(res, result_h=max(res1.shape[1] for res1 in res),width_list=width_list, sentence=True, dim=2)
+        gen.plot_image(res_tensor.unsqueeze(0),str(words)+' '+str(style_test_dataset[i]['label']))
+        sleep(0.5)
 
-opt_style_test = TrainOptions().parse()
-opt_style_test.dataname = 'style15IAMcharH32rmPunct_all'
-opt_style_test.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
-opt_style_test.test = True
-opt_style_test.device = opt.device
-style_test_dataset = StyleDataset(opt_style_test)
+def generate_sentences(gen, style_test_dataset, words):
+    #for i in range(0, len(style_test_dataset), 1):
+    sentences = ['']
+    i = 0
+    for word in words:
+        if len(sentences[i]) + len(word) + 1 < 60:
+            sentences[i] += f' {word}'
+        else:
+            sentences[i] = sentences[i].split()
+            i += 1
+            sentences.append(f'{word}')
+    if i < len(sentences):
+        sentences[i] = sentences[i].split()
+    for i in range(0,len(style_test_dataset),10):
+        imgs = [generate_single_sentence(gen, sentence, style_test_dataset[i]) for sentence in sentences]
+        res_tensor = concat_images(imgs, result_h=sum(img.shape[1] for img in imgs), result_w=max(img.shape[2] for img in imgs), dim=1)
+        # gen.plot_image(res_tensor.unsqueeze(0),str(words[:4])+' '+str(style_test_dataset[i]['label']))
+        # sleep(0.2)
+        gen.plot_result(res_tensor.unsqueeze(0), style_test_dataset[i]['original'].unsqueeze(0), 'a', style_test_dataset[i]['label'])
 
-gen.generate_and_save(".\gan_forward_new_all",10000,style_test_dataset)
-#exit(1)
-def hamartz():
-    '''
+
+def generate_task_3(gen, style_test_dataset, words_test_dataset, style_test_dataset_3):
+    cur = 0
+    min_i = 0
+    max_i = 0
+    words = []
+    for i in range(0, len(style_test_dataset), 1):
+        # if int(style_test_dataset[i]['label']):
+        if int(style_test_dataset[i]['label']) == cur:
+            max_i += 1
+        else:
+            for d in range(max_i - min_i + 3):
+                imgs = []
+                for k in range(5):
+                    words = [random.choice(words_test_dataset)['label'].decode('utf-8') for m in range(1)]
+                    res = [gen.generate_word_image(style_test_dataset[random.randint(min_i, max_i)], word).squeeze(1)
+                           for word in words]
+                    res_tensor = concat_images(res, result_h=sum(res1.shape[1] for res1 in res))
+                    org_3 = style_test_dataset_3[random.randint(min_i, max_i)]['original']
+                    org_2b = style_test_dataset_3[random.randint(min_i, max_i)]['original']
+                    lt = [org_3, res_tensor, org_2b]
+                    lt = rotate(lt, k - 3)
+                    # c = list(zip(lt, ['X','O','O']))
+                    # random.shuffle(c)
+                    # lt, flag = zip(*c)
+                    imgs.append(concat_images(lt, result_h=(res_tensor.shape[1] + org_3.shape[1]), dim=1))
+                img = concat_images(imgs, result_h=max(imgs[h].shape[1] for h in range(len(imgs))), dim=2)
+                # gen.plot_result(res, style_test_dataset_3[i]['original'].unsqueeze(0), word, style_test_dataset[i]['label'])
+                gen.plot_image(img.unsqueeze(0),
+                               f'BIG, style {style_test_dataset[max_i]["label"]}, words {str(words)[1:-1]}')
+                sleep(0.1)
+            min_i = i
+            max_i = i
+            cur = int(style_test_dataset[i]['label'])
+
+def generate_task_1_comp(gen, style_test_dataset, words_test_dataset, word=None):
+    const = word is not None
+    for i in range(0, len(style_test_dataset), 1):
+        if not const:
+            word = random.choice(words_test_dataset)['label'].decode('utf-8')
+        res = gen.generate_word_image(style_test_dataset[i], word)
+        gen.plot_result(res, style_test_dataset[i]['original'].unsqueeze(0), word, style_test_dataset[i]['label'])
+        sleep(0.1)
+
+def search_writers(style_dataset, writers):
+    from collections import defaultdict
+    d = defaultdict(list)
+    for i in tqdm(range(len(style_dataset))):
+        s = style_dataset[i]
+        if s['label'] in writers:
+            d[s['label']].append(i)
+    return d
+
+def main():
+    torch.set_num_threads(1)
+    print("harmatz lets finish this already ssksnm,fgx,mbvcvbcvbtguiu")
     opt = TrainOptions().parse()
-    opt.device = 'cuda'
-    # g = load_g('.\\checkpoints\\final_models\\latest_net_G.pth', opt)
+    opt.device = 'cpu'
+    g = load_g('checkpoints/final_models/10_net_G.pth', opt)
+    # g = load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final3cont_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\4_net_G.pth', opt)
+    # path_s =r"C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\\demo_paper_resnet18_steplr_style15IAMcharH32rmPunct_GANres16_bs128\bast_accuracy_val94.84375_net_Style_Encoder.pth"
+
+    path_s = ".\\checkpoints\\final_models\\bast_accuracy_val94.84375_net_Style_Encoder.pth"
+    # g=load_g(r'C:\Users\Ron\PycharmProjects\HandwritingGANgit\checkpoints\demo_autocast_final_IAMcharH32rmPunct_all_CapitalizeLex_GANres16_bs16_mixed_precs\latest_net_G-old.pth', opt)
+    # path_s="C:\\Users\\Ron\\PycharmProjects\\HandwritingGANgit\checkpoints\\demo_autocast_debug_style15IAMcharH32rmPunct_GANres16_bs128\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
+    s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s, device=opt.device).to(opt.device)
+    w = strLabelConverter(opt.alphabet)
+    vis = None
+    vis = Visualizer(opt)
+    gen = OurGenerator(g, s, w, opt.dim_z, opt, vis)
+
+    opt_style_test = TrainOptions().parse()
+    opt_style_test.dataname = 'style15IAMcharH32rmPunct_gan'
+    opt_style_test.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
+    opt_style_test.test = True
+    opt_style_test.device = opt.device
+    style_test_dataset = StyleDataset(opt_style_test)
+
+    opt_style_test_1 = TrainOptions().parse()
+    opt_style_test_1.k = 1
+    opt_style_test_1.dataname = 'style15IAMcharH32rmPunct_gan'
+    opt_style_test_1.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
+    opt_style_test_1.test = True
+    style_test_dataset_1 = StyleDataset(opt_style_test_1)
+    indexes = [241, 7, 1594, 1610, 180, 68, 365, 269, 1460, 770, 794, 1181, 1041, 337]
+    indexes = [337, 241, 180, 68, 180, 7, 365, 1041, 1610, 1594, 1460]
+    while True:
+        s_list = [style_test_dataset[i] for i in indexes]
+        s_list_1 = [style_test_dataset_1[i] for i in indexes]
+        word = 'Example of the same sentence with different styles'  # random.choice(['Israel','bar-ilan-university'])
+        gen_multi_style(gen, word, s_list, s_list_1)
+    '''
+    good_writers = [26, 84, 188, 210, 237, 240, 243, 244, 261, 273]
+    d = search_writers(style_test_dataset, good_writers)
+    while True:
+        indexes = [random.choice(d[writer]) for writer in good_writers]
+        s_list = [style_test_dataset[i] for i in indexes]
+        s_list_1 = [style_test_dataset_1[i] for i in indexes]
+        word = 'bar-ilan-university'#random.choice(['Israel','bar-ilan-university'])
+        gen_multi_style(gen, word, s_list, s_list_1)
+
+    '''
+    l = list(range(len(style_test_dataset)))
+    while True:
+        indexes = random.sample(l, 15)
+        s_list = []
+        s_list_1 = []
+        for i in indexes:
+            s = style_test_dataset[i]
+            if s['label'] not in s_list:
+                s_list.append(s)
+                s_list_1.append(style_test_dataset_1[i])
+                if len(s_list) == 10:
+                    gen_multi_style(gen, 'Example of the same sentence with different styles', s_list, s_list_1)
+                    break
+
+    '''
+    generate_sentences(gen, style_test_dataset, 'Alonso et al first presented a solution using Conditional GAN \
+                                                -conditioned on wanted word- to generate cursive text images of given \
+                                                words but no specified style for the image \
+                                                The network presented in Alonso work uses LSTM for encoding input word conditional \
+                                                Generator and Discriminator based on BigGAN network and R - RNN-CNN - recognizer for OCR \
+                                                while R is trained on real samples only with CTC loss and D uses adversarial loss the loss \
+                                                of G is the sum of D and R on the fakes generated'.split())
+    '''
+    # gen.generate_and_save(".\gan_forward_new2",50,style_test_dataset, bs=8)
+    exit(1)
+
+    opt = TrainOptions().parse()
+    opt.device = 'cpu'
+    # g = load_g('.\\checkpoints\\final_models\\latest_net_G-old.pth', opt)
     # path_s = ".\\checkpoints\\final_models\\bast_accuracy_val81.640625_net_Style_Encoder.pth"
     # s = StyleEncoder(opt, already_trained=True, features_only=True, path=path_s, device=opt.device).to(opt.device)
     # w = strLabelConverter(opt.alphabet)
     # vis = Visualizer(opt)
     # gen = OurGenerator(g, s, w, opt.dim_z, opt, vis)
+
     opt_style_test = TrainOptions().parse()
-    opt_style_test_3 = TrainOptions().parse()
     opt_style_test.dataname = 'style15IAMcharH32rmPunct_gan'
     opt_style_test.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
     opt_style_test.test = True
-    opt_style_test.device = 'cpu'
-    opt_style_test_3.dataname = 'style15IAMcharH32rmPunct_gan'
-    opt_style_test_3.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
-    opt_style_test_3.test = True
-    opt_style_test_3.device = 'cpu'
     style_test_dataset = StyleDataset(opt_style_test)
-    opt_style_test_3.k = 1
-    style_test_dataset_3 = StyleDataset(opt_style_test_3)
 
     opt_words = TrainOptions().parse()
     opt_words.dataname = 'IAMcharH32rmPunct_gan'
@@ -211,10 +355,21 @@ def hamartz():
     words_test_dataset = TextDataset(opt_words)
     l = list(range(0, len(words_test_dataset), 1))
     # random.shuffle(l)
+
+    generate_task_1_comp(gen, style_test_dataset, words_test_dataset, word='yehonatan-harmatz-was-here')
+    '''
+    opt_style_test_3 = TrainOptions().parse()
+    opt_style_test_3.k = 3
+    opt_style_test_3.dataname = 'style15IAMcharH32rmPunct_gan'
+    opt_style_test_3.dataroot = dataset_catalog.datasets[opt_style_test.dataname]
+    opt_style_test_3.test = True
+    style_test_dataset_3 = StyleDataset(opt_style_test_3)
+
+    
     same = []
     w_same = None
-
-
+    '''
+    '''
     2 vs 1
     for i in range(0, len(style_test_dataset), 1):
         # if int(style_test_dataset[i]['label']):
@@ -232,38 +387,10 @@ def hamartz():
         # gen.plot_result(res, style_test_dataset_3[i]['original'].unsqueeze(0), word, style_test_dataset[i]['label'])
         gen.plot_image(img.unsqueeze(0), f'ORD {str(flag)}, style {style_test_dataset[i]["label"]}, words {str(words)[1:-1]}')
         sleep(0.1)
-    cur = 0
-    min_i = 0
-    max_i = 0
-    for i in range(0, len(style_test_dataset), 1):
-        # if int(style_test_dataset[i]['label']):
-        if int(style_test_dataset[i]['label']) == cur:
-            max_i += 1
-        else:
-            for d in range(max_i-min_i+3):
-                imgs = []
-                for k in range(5):
-                    words = [random.choice(words_test_dataset)['label'].decode('utf-8') for m in range(1)]
-                    res = [gen.generate_word_image(style_test_dataset[random.randint(min_i,max_i)], word).squeeze(1) for word in words]
-                    res_tensor = concat_images(res, result_h=sum(res1.shape[1] for res1 in res))
-                    org_3 = style_test_dataset_3[random.randint(min_i,max_i)]['original']
-                    org_2b = style_test_dataset_3[random.randint(min_i,max_i)]['original']
-                    lt =[org_3, res_tensor, org_2b]
-                    lt = rotate(lt, k-3)
-                    # c = list(zip(lt, ['X','O','O']))
-                    # random.shuffle(c)
-                    # lt, flag = zip(*c)
-                    imgs.append(concat_images(lt, result_h=(res_tensor.shape[1] + org_3.shape[1]), dim=1))
-                img = concat_images(imgs, result_h=max(imgs[h].shape[1] for h in range(len(imgs))), dim=2)
-                # gen.plot_result(res, style_test_dataset_3[i]['original'].unsqueeze(0), word, style_test_dataset[i]['label'])
-                gen.plot_image(img.unsqueeze(0), f'BIG, style {style_test_dataset[max_i]["label"]}, words {str(words)[1:-1]}')
-                sleep(0.1)
-            min_i = i
-            max_i = i
-            cur = int(style_test_dataset[i]['label'])
+    '''
 
     '''
-    '''
+
     for i in l:
         # if int(style_test_dataset[i]['label']):
         # gen.generate_word_image(style_test_dataset[i], ast.literal_eval(style_test_dataset[i]['words'])[0])
@@ -285,6 +412,7 @@ def hamartz():
                 w_same = w
                 same = []
                 same.append(words_test_dataset[i])
+    """
     '''
     '''
     # random.shuffle(l)
@@ -320,4 +448,9 @@ def hamartz():
                     w_diff = []
                     diff = []
                     sleep(0.1)
-# '''
+    # '''
+
+
+
+if __name__ == '__main__':
+    main()

@@ -415,6 +415,8 @@ def expend_tensor(tensor, width):
         temp = c + (torch.rand(c.shape) - 0.5)/12.5
         for j in range(len(temp)):
             temp[j] = min(1, temp[j])
+            if temp[j] < 0.85:
+                temp[j] = 0.9 + (random.random()-0.5)/100
         l[i] = temp.unsqueeze(0).unsqueeze(2)
     pad = torch.cat(l,dim=2)
     new_tf[0,:,tensor.shape[2]:] = pad[0,:,:]
@@ -424,7 +426,7 @@ def expend_tensor(tensor, width):
 
 
 # written by Yehonatan Harmatz
-def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1,width_list=None):
+def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1,width_list=None, sentence=False):
     # max_x = max(tf_arr[i].shape[0] for i in range(len(tf_arr)))
 
     # max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
@@ -435,10 +437,16 @@ def concat_images(tf_arr, normalized=True, result_h=224, result_w=224, dim=1,wid
     #                 pad=[(max_y-tf.shape[1])//2, (max_y-tf.shape[1]+1)//2, (max_x-tf.shape[0])//2, (max_x-tf.shape[0]+1)//2],
     #                 mode='constant', value=0) for tf in tf_arr]
     pad_val = 1 if normalized else 256
-    if width_list is None:
-        pad_tf = [F.pad(input=tf,
-                        pad=[0, (max_y - tf.shape[2])],
-                        mode='constant', value=pad_val) for tf in tf_arr]
+    if not sentence:
+        if not width_list:
+            max_y = max(tf_arr[i].shape[2] for i in range(len(tf_arr)))
+            pad_tf = [F.pad(input=tf,
+                            pad=[0, (max_y - tf.shape[2])],
+                            mode='constant', value=pad_val) for tf in tf_arr]
+        else:
+            pad_tf = [F.pad(input=tf,
+                            pad=[0, (width_list[i] - tf.shape[2])],
+                            mode='constant', value=pad_val) for i, tf in enumerate(tf_arr)]
     # for i in range(len(pad_tf)):
     #     print(pad_tf[i].shape)
 

@@ -92,9 +92,8 @@ class StyleDataset(BaseDataset):
             style = np.load(io.BytesIO(a))
             imgs = []
             org_size = []
-            #random.shuffle(style)
-            #[:self.k]
-            for imgbuf in style:
+            random.shuffle(style)
+            for imgbuf in style[:self.k]:
                 buf = six.BytesIO()
                 buf.write(imgbuf)
                 buf.seek(0)
