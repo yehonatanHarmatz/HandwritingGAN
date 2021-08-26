@@ -6,8 +6,13 @@ this repo was initiality forked from ["ScrabbleGAN: Semi-Supervised Varying Leng
 This is a pytorch implementation of the paper 
 ["ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation"](https://www.amazon.science/publications/scrabblegan-semi-supervised-varying-length-handwritten-text-generation)
 
+### Added Features
+- Supports autocast feature of PyTorch
+- Generates style-varied handwriting based on given input style image
+- Fixes subtential bugs both training
+- More control when viewing the training process
 ### Dependency
-- This work was tested with PyTorch 1.2.0, CUDA 9.0, python 3.6 and Ubuntu 16.04. 
+- This work was tested with PyTorch ~~1.2.0, CUDA 9.0, python 3.6 and Ubuntu 16.04. ~~
 - requirements can be found in the file environmentPytorch12.yml. The command to create the environment from the file is:
 ```conda env create --name pytorch1.2 --file=environmentPytorch12.yml```
 - To activate the environment use:
@@ -22,7 +27,7 @@ This is a pytorch implementation of the paper
  ```
  python train.py --name_prefix demo --dataname RIMEScharH32W16 --capitalize --display_port 8192 
  ```
-
+TODO - add the correct flags
 * Main arguments:
     * `--name`: unless specified in the arguments, the experiment name is determined by the name_prefix, the dataset and parameters different from the default ones (see code in `options/base_options.py`).
     * `--name_prefix`: the prefix to the automatically generated experiment name.
