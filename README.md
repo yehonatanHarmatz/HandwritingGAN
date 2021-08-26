@@ -12,7 +12,7 @@ This is a pytorch implementation of the paper
 - Fixes subtential bugs both training
 - More control when viewing the training process
 ### Dependency
-- This work was tested with PyTorch ~~1.2.0, CUDA 9.0, python 3.6 and Ubuntu 16.04. ~~
+- This work was tested with PyTorch ~~1.2.0, CUDA 9.0, python 3.6 and Ubuntu 16.04.~~
 - requirements can be found in the file environmentPytorch12.yml. The command to create the environment from the file is:
 ```conda env create --name pytorch1.2 --file=environmentPytorch12.yml```
 - To activate the environment use:
