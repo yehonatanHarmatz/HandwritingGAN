@@ -1,6 +1,7 @@
 # ScrabbleStyleGAN: Semi-Supervised Varying Length Varying Style Handwritten Text Generation
 this repo was initiality forked from ["ScrabbleGAN: Semi-Supervised Varying Length Handwritten Text Generation"](https://github.com/amzn/convolutional-handwriting-gan)
 
+Made by Ron Sherman & Yehonatan Harmatz
 ![](imgs/arch_superkali.gif)
 
 This is a pytorch implementation of the paper 
